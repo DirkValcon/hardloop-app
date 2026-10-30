@@ -26,7 +26,10 @@ function bewaardeGebruiker(opslag = localStorage) {
 
 export async function huidigeGebruiker() {
   if (!ingesteld()) return null;
-  const { data, error } = await sb().auth.getSession();
+  // Blijft het ophalen van de sessie hangen (traag netwerk), start dan met de bewaarde sessie.
+  const traag = new Promise((ok) => setTimeout(() => ok({ data: {}, error: 'traag' }), 6000));
+  const { data, error } = await Promise.race([sb().auth.getSession(), traag]);
+  if (error === 'traag') return bewaardeGebruiker();
   // Na terugkomst van Google staat ?code= in de adresbalk; die is nu verwerkt.
   if (new URLSearchParams(location.search).has('code')) history.replaceState(null, '', location.pathname + location.hash);
   if (data.session) return data.session.user;
