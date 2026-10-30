@@ -34,14 +34,17 @@ function verplaatsHtml(t, week, vandaag) {
 
 function statusHtml(t, r, vandaag) {
   if (r?.status === 'gedaan') {
-    return `<div class="status"><span class="hint">✓ Gedaan: ${km(r.afstandKm)} km · ${minuten(r.duurSec)} · ${r.kcal} kcal</span>
+    const op = r.datum !== t.datum ? ` op ${korteDatum(r.datum)}` : '';
+    return `<div class="status"><span class="hint">✓ Gedaan${op}: ${km(r.afstandKm)} km · ${minuten(r.duurSec)} · ${r.kcal} kcal</span>
       <button type="button" class="secundair klein" data-ongedaan="${t.id}">Ongedaan maken</button></div>`;
   }
   if (r?.status === 'overgeslagen') {
     return `<div class="status"><span class="hint">Overgeslagen</span>
       <button type="button" class="secundair klein" data-ongedaan="${t.id}">Ongedaan maken</button></div>`;
   }
-  return t.datum <= vandaag ? `<div class="status"><a class="knop secundair klein" href="#afvinken/${t.id}">Afvinken</a></div>` : '';
+  // Elke training kan op elk moment gestart worden; hij telt dan voor de dag waarop je hem loopt.
+  return `<div class="status"><a class="knop primair klein" href="#loop/${t.id}" data-test="start">Start</a>
+    <a class="knop secundair klein" href="#afvinken/${t.id}">Afvinken</a></div>`;
 }
 
 function trainingHtml(t, week, vandaag, gewicht, r) {

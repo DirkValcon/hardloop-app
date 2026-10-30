@@ -52,7 +52,8 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
   const resultaten = laadResultaten(opslag);
   const deWeek = plan.weken.find((w) => vandaag >= w.maandag && vandaag <= plusDagen(w.maandag, 6));
   const gemist = deWeek ? deWeek.trainingen.filter((t) => t.datum < vandaag && !resultaten[t.id]) : [];
-  const vandaagGedaan = plan.weken.flatMap((w) => w.trainingen).filter((t) => t.datum === vandaag && resultaten[t.id]?.status === 'gedaan');
+  // Wat vandaag gelopen is, ook als die training voor een andere dag gepland stond.
+  const vandaagGedaan = plan.weken.flatMap((w) => w.trainingen).filter((t) => resultaten[t.id]?.status === 'gedaan' && resultaten[t.id].datum === vandaag);
   const volgende = volgendeTraining(plan, vandaag, resultaten);
 
   root.onclick = (e) => {
@@ -105,7 +106,7 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
         <li><span>${f.naam}<small>${minuten(f.duur)}</small></span><span class="blok-waarden"><strong>${f.snelheid}</strong> km/u</span></li>`).join('')}
       </ol>
       <p class="hint">Helling ${String(effectiefProfiel(profiel, vandaag).helling).replace('.', ',')}% · uitwandelen op 0%</p>
-      <a class="knop primair breed${isVandaag ? '' : ' is-uit'}" ${isVandaag ? `href="#loop/${t.id}"` : 'aria-disabled="true"'} role="button" data-actie="start">Start op loopband</a>
+      <a class="knop primair breed" href="#loop/${t.id}" role="button" data-actie="start">${isVandaag ? 'Start op loopband' : 'Nu al starten'}</a>
       ${isVandaag ? `<div class="knoppen klein-knoppen">
         <a class="knop secundair" href="#afvinken/${t.id}">Afvinken zonder app</a>
         <button type="button" class="secundair" data-overslaan="${t.id}">Overslaan</button>

@@ -11,7 +11,7 @@ async function bekijk(vandaag, naam) {
   const r = {
     kaart: (await ctx.page.textContent('[data-test=vandaag]')).replace(/\s+/g, ' '),
     rustdag: await ctx.page.locator('[data-test=rustdag]').textContent().catch(() => null),
-    start: await ctx.page.getByRole('button', { name: 'Start op loopband' }).isEnabled(),
+    start: (await ctx.page.textContent('[data-actie=start]')).trim(),
     kcal: Number(await ctx.page.textContent('[data-test=kcal]')),
     totDoel: await ctx.page.textContent('[data-test=tot-doel]'),
   };
@@ -30,7 +30,7 @@ assert.match(di.kaart, /49 min/);
 assert.match(di.kaart, /Warming-up ?10 min ?6,1–6,9 km\/u/);
 assert.match(di.kaart, /Uitjoggen \+ uitwandelen ?5 min ?5,5–6,1 km\/u/);
 assert.ok(di.kcal > 350 && di.kcal < 550, String(di.kcal));
-assert.equal(di.start, true);
+assert.equal(di.start, 'Start op loopband');
 assert.match(di.totDoel, /Nog 75 dagen tot je 10 km op 17 januari 2027/);
 
 // Rustdag: woensdag 4 november, volgende is de kwaliteitstraining op donderdag.
@@ -39,7 +39,7 @@ assert.match(wo.rustdag, /Vandaag is een rustdag/);
 assert.match(wo.kaart, /Morgen · Week 1/);
 assert.match(wo.kaart, /6 × 400 m op 5 km-tempo/);
 assert.match(wo.kaart, /8,9 km\/u/);
-assert.equal(wo.start, false);
+assert.equal(wo.start, 'Nu al starten'); // ook op een rustdag kun je starten
 
 // Vóór de start van het schema.
 const voor = await bekijk('2026-10-30');

@@ -194,3 +194,5 @@ a.knop.klein { padding: 8px 14px; font-size: 15px; margin: 0; }
 .legenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .l-gedaan { background: var(--accent); }
 .l-plan { border: 1px dashed var(--zacht); }
+.status .knop + .knop { margin-left: 8px; }
+.status { justify-content: flex-start; flex-wrap: wrap; }
