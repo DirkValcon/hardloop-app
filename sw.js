@@ -1,6 +1,8 @@
 // Service worker: de app werkt ook zonder internet (bijvoorbeeld in de sportschool).
-// Eerst uit de cache, op de achtergrond bijwerken; verhoog VERSIE bij een nieuwe release.
-const VERSIE = 'loopschema-v5';
+// Eerst van internet (altijd de nieuwste versie, nooit oude en nieuwe bestanden door elkaar),
+// zonder of met traag internet uit de cache. Verhoog VERSIE bij een nieuwe release.
+const VERSIE = 'loopschema-v6';
+const WACHTTIJD_MS = 4000;
 const BESTANDEN = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'vendor/supabase.js',
@@ -11,7 +13,7 @@ const BESTANDEN = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSIE).then((c) => c.addAll(BESTANDEN)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSIE).then((c) => c.addAll(BESTANDEN.map((b) => new Request(b, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -23,11 +25,13 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(caches.open(VERSIE).then(async (cache) => {
-    const bewaard = await cache.match(e.request, { ignoreSearch: true });
-    const vers = fetch(e.request).then((antwoord) => {
+    const vers = fetch(e.request, { cache: 'no-cache' }).then((antwoord) => {
       if (antwoord.ok) cache.put(e.request, antwoord.clone());
       return antwoord;
-    }).catch(() => bewaard);
-    return bewaard ?? vers;
+    });
+    const bewaard = await cache.match(e.request, { ignoreSearch: true });
+    if (!bewaard) return vers;
+    const traag = new Promise((ok) => setTimeout(() => ok(bewaard), WACHTTIJD_MS));
+    return Promise.race([vers.catch(() => bewaard), traag]);
   }));
 });

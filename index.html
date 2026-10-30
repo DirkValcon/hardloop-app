@@ -14,6 +14,36 @@
 </head>
 <body>
   <main id="app"></main>
+  <script>
+    // Start de app niet, laat dan zien waarom (in plaats van een leeg scherm) met een knop om te herstellen.
+    (function () {
+      var app = document.getElementById('app');
+      function toon(reden) {
+        if (app.children.length && !app.querySelector('[data-test=startfout]')) return;
+        var tekst = String(reden && (reden.message || reden) || 'onbekende fout');
+        app.innerHTML = '<div data-test="startfout"><h1>De app start niet</h1>' +
+          '<p class="uitleg">Tik op Herstellen: de app haalt dan alles opnieuw op. Je gegevens blijven bewaard.</p>' +
+          '<button type="button" class="knop" data-test="herstellen">Herstellen</button>' +
+          '<p class="hint">Foutmelding: <span data-test="fouttekst"></span></p></div>';
+        app.querySelector('[data-test=fouttekst]').textContent = tekst;
+        app.querySelector('[data-test=herstellen]').onclick = async function () {
+          try {
+            var sws = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(sws.map(function (r) { return r.unregister(); }));
+            var sleutels = await caches.keys();
+            await Promise.all(sleutels.map(function (k) { return caches.delete(k); }));
+          } catch (e) { /* dan in elk geval opnieuw laden */ }
+          location.reload();
+        };
+      }
+      window.toonStartfout = toon;
+      addEventListener('error', function (e) {
+        toon(e.error || e.message || ('kon ' + (e.target && (e.target.src || e.target.href)) + ' niet laden'));
+      }, true);
+      addEventListener('unhandledrejection', function (e) { toon(e.reason); });
+      setTimeout(function () { if (!app.children.length) toon('de app startte niet binnen 15 seconden'); }, 15000);
+    })();
+  </script>
   <script src="vendor/supabase.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
