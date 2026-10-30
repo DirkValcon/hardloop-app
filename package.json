@@ -1,0 +1,9 @@
+{
+  "name": "hardloop-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js && node tests/e2e/onboarding.e2e.js",
+    "serve": "node tests/server.js"
+  }
+}

@@ -1,0 +1,71 @@
+:root {
+  --bg: #f6f7f9;
+  --kaart: #ffffff;
+  --tekst: #14161a;
+  --zacht: #5d6470;
+  --lijn: #dde1e7;
+  --accent: #e8590c;
+  --accent-tekst: #ffffff;
+  --fout: #c92a2a;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --kaart: #1a1d23;
+    --tekst: #f1f3f5;
+    --zacht: #9aa3ae;
+    --lijn: #2c313a;
+    --accent: #ff7a33;
+    --accent-tekst: #14161a;
+    --fout: #ff6b6b;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--tekst); }
+body {
+  font: 17px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+  min-height: 100vh;
+}
+main { max-width: 520px; margin: 0 auto; padding: 24px 0 40px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 8px 0 6px; }
+p.uitleg { color: var(--zacht); margin: 0 0 20px; }
+.voortgang { display: flex; gap: 6px; margin-bottom: 20px; }
+.voortgang span { flex: 1; height: 4px; border-radius: 2px; background: var(--lijn); }
+.voortgang span.actief { background: var(--accent); }
+.stapnr { color: var(--zacht); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.veld { margin-bottom: 18px; }
+label.titel { display: block; font-weight: 600; margin-bottom: 6px; }
+.hint { color: var(--zacht); font-size: 14px; margin-top: 4px; }
+.foutmelding { color: var(--fout); font-size: 15px; margin-top: 6px; }
+input[type=text], input[type=date], input[type=number] {
+  width: 100%; font: inherit; font-size: 20px; padding: 12px 14px;
+  border: 1px solid var(--lijn); border-radius: 12px; background: var(--kaart); color: var(--tekst);
+}
+input[aria-invalid=true] { border-color: var(--fout); }
+.keuzes { display: grid; gap: 10px; }
+.keuze {
+  display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px;
+  border: 1px solid var(--lijn); background: var(--kaart);
+}
+.keuze input { margin-top: 4px; accent-color: var(--accent); width: 20px; height: 20px; }
+.keuze small { display: block; color: var(--zacht); }
+.dagen { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.dag input { position: absolute; opacity: 0; pointer-events: none; }
+.dag span {
+  display: grid; place-items: center; height: 48px; border-radius: 12px; font-weight: 600;
+  border: 1px solid var(--lijn); background: var(--kaart);
+}
+.dag input:checked + span { background: var(--accent); color: var(--accent-tekst); border-color: var(--accent); }
+.dag input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.knoppen { display: flex; gap: 10px; margin-top: 28px; }
+button {
+  font: inherit; font-weight: 600; padding: 14px 18px; border-radius: 14px; border: 0; cursor: pointer;
+}
+button.primair { flex: 1; background: var(--accent); color: var(--accent-tekst); }
+button.secundair { background: var(--kaart); color: var(--tekst); border: 1px solid var(--lijn); }
+.kaart { background: var(--kaart); border: 1px solid var(--lijn); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
+dl.samenvatting { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; }
+dl.samenvatting dt { color: var(--zacht); }
+dl.samenvatting dd { margin: 0; font-weight: 600; }
