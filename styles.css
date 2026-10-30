@@ -196,3 +196,14 @@ a.knop.klein { padding: 8px 14px; font-size: 15px; margin: 0; }
 .l-plan { border: 1px dashed var(--zacht); }
 .status .knop + .knop { margin-left: 8px; }
 .status { justify-content: flex-start; flex-wrap: wrap; }
+.loop-stand { display: flex; justify-content: space-between; color: var(--zacht); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.loop-stand [data-test=afstand] { color: var(--tekst); font-weight: 700; font-size: 20px; }
+.snelheid-vak { position: relative; }
+.snelheid-vak.is-aangepast .eenheid::after { content: ' (aangepast)'; }
+.plusmin { display: flex; gap: 8px; margin-top: 10px; }
+.plusmin button { flex: 1; font-size: 28px; line-height: 1; padding: 10px 0; background: var(--bg); color: var(--tekst); border: 1px solid var(--lijn); }
+.eigen-rij { display: grid; grid-template-columns: 1fr 96px; gap: 4px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--lijn); }
+.eigen-rij label { font-weight: 600; }
+.eigen-rij label small { display: block; color: var(--zacht); font-weight: 400; font-size: 13px; }
+.eigen-rij input { font-size: 18px; padding: 10px; text-align: right; }
+.eigen-rij .foutmelding { grid-column: 1 / -1; }

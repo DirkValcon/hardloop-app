@@ -1,6 +1,6 @@
 // Service worker: de app werkt ook zonder internet (bijvoorbeeld in de sportschool).
 // Eerst uit de cache, op de achtergrond bijwerken; verhoog VERSIE bij een nieuwe release.
-const VERSIE = 'loopschema-v1';
+const VERSIE = 'loopschema-v2';
 const BESTANDEN = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'js/app.js', 'js/afronden.js', 'js/aanpassingen.js', 'js/calorieen.js', 'js/datum.js', 'js/instellingen.js',

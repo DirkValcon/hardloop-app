@@ -1,10 +1,10 @@
 // Trainingsscherm voor op de loopband: groot de snelheid en helling, aftellende timer,
 // een balk met alle blokken en een aankondiging 10 seconden voor het volgende blok.
-import { maakSpeler, start, pauzeer, hervat, overslaan, toestand, verstreken, VOORAANKONDIGING_SEC } from './speler.js';
+import { maakSpeler, start, pauzeer, hervat, overslaan, toestand, pasSnelheidAan, VOORAANKONDIGING_SEC } from './speler.js';
 import { kmh, minuten } from './opmaak.js';
 import { formatTijd } from './tijd.js';
 import { tempoPerKm } from './zones.js';
-import { kcalTotVerstreken, afstandTotVerstreken } from './calorieen.js';
+import { schatKcal } from './resultaten.js';
 import { afrondFormulier, koppelAfronden } from './afronden.js';
 
 export const OPSLAG_LOPEND = 'hardloop-app.lopend.v1';
@@ -53,7 +53,7 @@ function maakGeluid() {
       if (!aan || !window.speechSynthesis) return;
       const u = new SpeechSynthesisUtterance(tekst);
       u.lang = 'nl-NL';
-      speechSynthesis.cancel();
+      // Niet afbreken: een kilometertijd en een blokaankondiging mogen na elkaar komen.
       speechSynthesis.speak(u);
     },
   };
@@ -68,7 +68,18 @@ function houdSchermAan() {
   return () => { document.removeEventListener('visibilitychange', bijTerugkeer); lock?.release?.(); };
 }
 
-const uitspraak = (b) => `${blokTitel(b)}, ${kmh(b.kmh).replace(',', ' komma ')} kilometer per uur${b.helling ? `, helling ${helling(b.helling)} procent` : ''}`;
+const spreekGetal = (v) => kmh(v).replace(',0', '').replace(',', ' komma ');
+const spreekDuur = (sec) => {
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return [m ? `${m} ${m === 1 ? 'minuut' : 'minuten'}` : '', s ? `${s} ${s === 1 ? 'seconde' : 'seconden'}` : ''].filter(Boolean).join(' ');
+};
+// Wat je in een blok moet doen, uitgesproken: "5 km-tempo 2 van 6: 400 meter op 8 komma 9 kilometer per uur".
+export const uitspraak = (b, snelheid = b.kmh) => {
+  const wat = b.afstandM ? `${b.afstandM >= 1000 ? `${spreekGetal(b.afstandM / 1000)} kilometer` : `${b.afstandM} meter`}` : spreekDuur(b.duurSec);
+  return `${blokTitel(b)}: ${wat} op ${spreekGetal(snelheid)} kilometer per uur${b.helling ? `, helling ${spreekGetal(b.helling)} procent` : ', helling op nul'}`;
+};
+export const kilometerTekst = (nr, sec) => `Kilometer ${nr}. ${spreekDuur(sec)}.`;
 
 // ---------- Scherm ----------
 
@@ -77,7 +88,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   let speler = maakSpeler(training.blokken);
   let timer = null;
   let stopSchermAan = null;
-  let vorige = { index: -1, aankondigen: false, klaar: false };
+  let vorige = { index: -1, aankondigen: false, klaar: false, km: 0, kmOpMs: 0 };
 
   // Doorgaan na herladen: de lopende training staat in de opslag.
   try {
@@ -86,8 +97,10 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   } catch { /* geen lopende training */ }
 
   const bewaar = () => {
-    const { gestartOp, pauzeOp, gepauzeerdMs, extraMs } = speler;
-    opslag.setItem(OPSLAG_LOPEND, JSON.stringify({ trainingId: training.id, stand: { gestartOp, pauzeOp, gepauzeerdMs, extraMs } }));
+    const { gestartOp, pauzeOp, gepauzeerdMs, extraMs, wijzigingen, overgeslagen } = speler;
+    opslag.setItem(OPSLAG_LOPEND, JSON.stringify({
+      trainingId: training.id, stand: { gestartOp, pauzeOp, gepauzeerdMs, extraMs, wijzigingen, overgeslagen },
+    }));
   };
   const opruimen = () => {
     clearInterval(timer);
@@ -104,7 +117,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
       <section class="loop" data-test="loopscherm">
         <div class="loop-kop"><button type="button" class="secundair klein" data-actie="terug">Terug</button></div>
         <h1>${training.naam}</h1>
-        <p class="uitleg">${minuten(training.duurSec)} · ${training.blokken.length} blokken. Zet de loopband op
+        <p class="uitleg">${minuten(training.duurSec)} · ${training.blokken.length} blokken. Je hoort na elke kilometer je tijd en 10 seconden voor elk blok wat je moet doen. Zet de loopband op
           <strong>${kmh(training.blokken[0].kmh)} km/u</strong> en <strong>${helling(training.blokken[0].helling)}%</strong> en druk op Start.</p>
         <div class="loop-balk">${balk}</div>
         <label class="keuze geluid-keuze"><input type="checkbox" data-actie="geluid" checked>
@@ -120,8 +133,15 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
           <span class="loop-titel" data-test="bloktitel"></span>
           <span class="loop-totaal" data-test="totaal"></span>
         </div>
+        <div class="loop-stand"><span data-test="afstand"></span><span data-test="laatste-km"></span></div>
         <div class="loop-groot">
-          <div><span class="waarde" data-test="snelheid"></span><span class="eenheid">km/u</span></div>
+          <div class="snelheid-vak">
+            <span class="waarde" data-test="snelheid"></span><span class="eenheid">km/u</span>
+            <div class="plusmin">
+              <button type="button" data-actie="langzamer" aria-label="Langzamer">−</button>
+              <button type="button" data-actie="sneller" aria-label="Sneller">+</button>
+            </div>
+          </div>
           <div><span class="waarde" data-test="helling"></span><span class="eenheid">% helling</span></div>
         </div>
         <div class="loop-tempo" data-test="tempo"></div>
@@ -137,7 +157,9 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   }
 
   function tekenKlaar(gestopt = false) {
-    const sec = Math.round(verstreken(speler, Date.now()) / 1000);
+    const t = toestand(speler, Date.now());
+    const sec = Math.round(t.echtMs / 1000);
+    const afstandKm = Math.round(t.afstandKm * 100) / 100;
     opruimen();
     document.body.classList.remove('loopmodus');
     root.innerHTML = `
@@ -147,8 +169,8 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
           ? `Je bent gestopt na ${Math.round(sec / 60)} min. Wil je opslaan wat je gedaan hebt?`
           : `${training.naam} zit erop. Goed gedaan.`}</p>
         ${afrondFormulier({
-          afstandKm: afstandTotVerstreken(training, sec), duurSec: sec,
-          kcal: kcalTotVerstreken(training, sec, profiel.gewicht),
+          afstandKm, duurSec: sec,
+          kcal: schatKcal(training, afstandKm, profiel.gewicht),
         })}
       </section>`;
     koppelAfronden(root, training, profiel, { opslag, opgeslagen: () => klaar?.(), annuleer: () => terug?.() });
@@ -166,9 +188,11 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     const b = t.blok;
     $('bloktitel').textContent = blokTitel(b);
     $('totaal').textContent = `nog ${klok(t.restTotaalMs)}`;
-    $('snelheid').textContent = kmh(b.kmh);
+    $('snelheid').textContent = kmh(t.kmh);
+    $('snelheid').closest('.snelheid-vak').classList.toggle('is-aangepast', t.kmh !== b.kmh);
     $('helling').textContent = helling(b.helling);
-    $('tempo').textContent = `${formatTijd(tempoPerKm(b.kmh))} /km${b.afstandM ? ` · ${b.afstandM} m` : ''}`;
+    $('tempo').textContent = `${formatTijd(tempoPerKm(t.kmh))} /km${b.afstandM ? ` · ${b.afstandM >= 1000 ? `${String(b.afstandM / 1000).replace('.', ',')} km` : `${b.afstandM} m`}` : ''}${t.kmh !== b.kmh ? ` · schema ${kmh(b.kmh)}` : ''}`;
+    $('afstand').textContent = `${t.afstandKm.toFixed(2).replace('.', ',')} km`;
     $('timer').textContent = klok(t.restBlokMs);
     const sectie = root.querySelector('.loop');
     sectie.dataset.soort = b.soort;
@@ -182,19 +206,31 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     const volgendeEl = $('volgende');
     volgendeEl.classList.toggle('is-aankondiging', t.aankondigen);
     volgendeEl.textContent = v
-      ? `${t.aankondigen ? `Over ${Math.ceil(t.restBlokMs / 1000)} s` : 'Hierna'}: ${blokTitel(v)}, ${kmh(v.kmh)} km/u${v.helling !== b.helling ? `, ${helling(v.helling)}%` : ''}`
+      ? `${t.aankondigen ? `Over ${Math.ceil(t.restBlokMs / 1000)} s` : 'Hierna'}: ${blokTitel(v)}, ${kmh(t.volgendeKmh)} km/u${v.helling !== b.helling ? `, ${helling(v.helling)}%` : ''}`
       : 'Laatste blok';
 
-    if (t.index !== vorige.index && vorige.index !== -1) { geluid.piep(2, true); geluid.zeg(`Nu: ${uitspraak(b)}`); }
-    else if (t.aankondigen && !vorige.aankondigen) { geluid.piep(1); geluid.zeg(`Over ${VOORAANKONDIGING_SEC} seconden: ${uitspraak(v)}`); }
-    vorige = { index: t.index, aankondigen: t.aankondigen, klaar: false };
+    // Na elke volle kilometer: de tijd van die kilometer (echte looptijd, zonder pauzes).
+    const heleKm = Math.floor(t.afstandKm);
+    if (heleKm > vorige.km) {
+      const kmSec = (t.echtMs - vorige.kmOpMs) / 1000;
+      $('laatste-km').textContent = `km ${heleKm}: ${formatTijd(kmSec)}`;
+      geluid.zeg(kilometerTekst(heleKm, kmSec));
+      vorige.km = heleKm;
+      vorige.kmOpMs = t.echtMs;
+    }
+
+    if (t.index !== vorige.index && vorige.index !== -1) { geluid.piep(2, true); geluid.zeg(`Nu: ${uitspraak(b, t.kmh)}`); }
+    else if (t.aankondigen && !vorige.aankondigen) { geluid.piep(1); geluid.zeg(`Over ${VOORAANKONDIGING_SEC} seconden: ${uitspraak(v, t.volgendeKmh)}`); }
+    vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, klaar: false };
   }
 
   function loop() {
     tekenLopend();
     stopSchermAan = houdSchermAan();
+    // Na herladen niet opnieuw alle kilometers en het huidige blok aankondigen.
+    const t = toestand(speler, Date.now());
+    vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, km: Math.floor(t.afstandKm), kmOpMs: t.echtMs };
     ververs();
-    vorige.index = toestand(speler, Date.now()).index;
     timer = setInterval(ververs, 250);
   }
 
@@ -213,6 +249,11 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     }
     if (actie === 'pauze') { speler = speler.pauzeOp === null ? pauzeer(speler, nu) : hervat(speler, nu); bewaar(); ververs(); }
     if (actie === 'overslaan') { speler = overslaan(speler, nu); bewaar(); ververs(); }
+    if (actie === 'sneller' || actie === 'langzamer') {
+      speler = pasSnelheidAan(speler, nu, actie === 'sneller' ? 0.1 : -0.1);
+      bewaar();
+      ververs();
+    }
     if (actie === 'stop') {
       if (!confirm('Training stoppen?')) return;
       speler = pauzeer(speler, nu);
