@@ -211,3 +211,5 @@ a.knop.klein { padding: 8px 14px; font-size: 15px; margin: 0; }
 button.google { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1f1f1f; border: 1px solid #dadce0; }
 button.google svg { width: 20px; height: 20px; }
 .account-email { margin: 0 0 4px; overflow-wrap: anywhere; }
+.loop[data-soort=extra] .loop-timer { color: #2f9e44; }
+.loop .knoppen [hidden] { display: none; }

@@ -64,9 +64,18 @@ try {
   for (let i = 0; i < 12; i++) await page.getByRole('button', { name: 'Volgend blok' }).click();
   assert.equal(await lees('bloktitel'), 'Uitwandelen');
   assert.equal(await lees('helling'), '0');
-  assert.equal(await lees('volgende'), 'Laatste blok');
+  assert.match(await lees('volgende'), /^Laatste blok/);
   await shot('story6-uitwandelen');
+
+  // Na het laatste blok stopt de training niet: hij loopt door en de klok telt op.
   await tijd(121_000);
+  assert.equal(await lees('bloktitel'), 'Extra: doorlopen');
+  assert.match(await lees('timer'), /^\+0:0[12]$/);
+  await tijd(60_000);
+  assert.match(await lees('timer'), /^\+1:0[12]$/);
+  assert.equal(await page.locator('[data-actie=overslaan]').isVisible(), false);
+  await shot('verbetering-doorlopen');
+  await page.getByRole('button', { name: 'Training afronden' }).click();
   assert.match(await lees('klaar'), /6 × 400 m op 5 km-tempo zit erop/);
   await page.waitForSelector('[data-test=afronden]');
   await page.getByRole('button', { name: 'Opslaan als gedaan' }).click();
