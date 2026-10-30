@@ -19,7 +19,7 @@ npm run serve     # lokaal bekijken op http://127.0.0.1:8080/
 | 2 | Snelheden in km/u en haalbaarheid doeltijd | klaar |
 | 3 | Schema van 11 weken | klaar |
 | 4 | Scherm Vandaag | klaar |
-| 5 | Dagen verschuiven per week | |
+| 5 | Dagen verschuiven per week | klaar |
 | 6 | Trainingsscherm loopband | |
 | 7 | Training afvinken + calorieën | |
 | 8 | Voortgang | |

@@ -1,5 +1,8 @@
-// Scherm Schema: alle weken met hun trainingen; tik een training open voor de blokken.
+// Scherm Schema: alle weken met hun trainingen. Tik een training open voor de blokken en om hem
+// naar een andere dag van dezelfde week te verplaatsen; per week kun je dagen vrij zetten.
 import { maakPlan } from './schema.js';
+import { laadAanpassingen, bewaarAanpassingen, verplaats, zetVrij, pasToe } from './aanpassingen.js';
+import { DAGEN } from './profiel.js';
 import { plusDagen, vandaagIso } from './datum.js';
 import { kmh, km, minuten, blokDuur, korteDatum } from './opmaak.js';
 import { kcalTraining } from './calorieen.js';
@@ -7,6 +10,7 @@ import { kcalTraining } from './calorieen.js';
 const DAGNAAM = { ma: 'Ma', di: 'Di', wo: 'Wo', do: 'Do', vr: 'Vr', za: 'Za', zo: 'Zo' };
 const TYPE = { rustig: 'Rustig', kwaliteit: 'Kwaliteit', lang: 'Lang', doel: 'Doel' };
 const BADGE = { herstel: 'Herstelweek', taper: 'Laatste week', basis: 'Basis' };
+const weekId = (w) => `${w.soort === 'basis' ? 'b' : ''}${w.nummer}`;
 
 function blokRegel(b) {
   const nr = b.herhaling && b.van ? ` ${b.herhaling}/${b.van}` : b.deel ? ` ${b.deel}` : '';
@@ -15,29 +19,85 @@ function blokRegel(b) {
     <span class="blok-waarden"><strong>${kmh(b.kmh)}</strong> km/u<small>${String(b.helling).replace('.', ',')}% helling</small></span></li>`;
 }
 
-function trainingHtml(t, vandaag, gewicht) {
+function verplaatsHtml(t, week, vandaag) {
+  if (t.type === 'doel') return '<p class="hint">De 10 km staat vast op je doeldatum.</p>';
+  if (t.datum < vandaag) return '';
+  const knoppen = DAGEN.map((d, i) => {
+    const datum = plusDagen(week.maandag, i);
+    const kan = datum !== t.datum && datum >= vandaag && !(week.trainingen.find((x) => x.datum === datum)?.type === 'doel');
+    return `<button type="button" class="dagknop" data-verplaats="${t.id}" data-naar="${datum}" ${kan ? '' : 'disabled'}
+      aria-label="Verplaats naar ${d} ${korteDatum(datum)}">${d}</button>`;
+  }).join('');
+  return `<div class="verplaats"><span class="hint">Verplaats naar</span><div class="dagknoppen">${knoppen}</div></div>`;
+}
+
+function trainingHtml(t, week, vandaag, gewicht) {
   return `
     <details class="training training-${t.type}${t.datum === vandaag ? ' is-vandaag' : ''}" data-training="${t.id}">
       <summary>
         <span class="dag">${DAGNAAM[t.dag]}<small>${korteDatum(t.datum)}</small></span>
-        <span class="wat"><span class="label label-${t.type}">${TYPE[t.type]}</span>${t.naam}
+        <span class="wat"><span class="label label-${t.type}">${TYPE[t.type]}${t.verplaatst ? ' · verplaatst' : ''}</span>${t.naam}
           <small>${minuten(t.duurSec)} · ca. ${km(t.afstandKm)} km · ${kcalTraining(t, gewicht)} kcal</small></span>
       </summary>
+      ${verplaatsHtml(t, week, vandaag)}
       <ol class="blokken">${t.blokken.map(blokRegel).join('')}</ol>
     </details>`;
 }
 
-export function toonSchema(root, profiel, { vandaag = vandaagIso() } = {}) {
-  const plan = maakPlan(profiel, { vandaag });
-  const huidige = plan.weken.find((w) => vandaag >= w.maandag && vandaag <= plusDagen(w.maandag, 6));
-  const weken = plan.weken.map((w) => `
-    <section class="week${w === huidige ? ' is-huidig' : ''}" data-week="${w.soort === 'basis' ? 'b' : ''}${w.nummer}" id="week-${w.soort === 'basis' ? 'b' : ''}${w.nummer}">
+function weekHtml(w, aanpassingen, vandaag, gewicht, huidig) {
+  const vrij = new Set(aanpassingen.vrij);
+  const vrijKnoppen = DAGEN.map((d, i) => {
+    const datum = plusDagen(w.maandag, i);
+    return `<button type="button" class="dagknop${vrij.has(datum) ? ' is-vrij' : ''}" data-vrij="${datum}"
+      aria-pressed="${vrij.has(datum)}" ${datum < vandaag ? 'disabled' : ''} aria-label="${d} ${korteDatum(datum)} vrij">${d}</button>`;
+  }).join('');
+  return `
+    <section class="week${huidig ? ' is-huidig' : ''}" data-week="${weekId(w)}" id="week-${weekId(w)}">
       <h2>${w.label} ${BADGE[w.soort] ? `<span class="badge badge-${w.soort}">${BADGE[w.soort]}</span>` : ''}
         <small>${korteDatum(w.maandag)} – ${korteDatum(plusDagen(w.maandag, 6))}</small></h2>
-      <div class="kaart trainingen">${w.trainingen.map((t) => trainingHtml(t, vandaag, profiel.gewicht)).join('')}</div>
-    </section>`).join('');
-  const start = plan.weken[0].maandag > vandaag
-    ? `<p class="uitleg">Je schema start op maandag ${korteDatum(plan.weken[0].maandag)}.</p>` : '';
-  root.innerHTML = `<h1>Schema</h1>${start}${weken}`;
-  root.querySelector('.week.is-huidig')?.scrollIntoView({ block: 'start' });
+      ${w.waarschuwingen.map((x) => `<div class="melding melding-te-snel" data-test="waarschuwing">⚠ ${x.tekst}</div>`).join('')}
+      <div class="kaart trainingen">${w.trainingen.map((t) => trainingHtml(t, w, vandaag, gewicht)).join('')}</div>
+      ${w.vervallen.length ? `<p class="hint" data-test="vervallen">Vervalt deze week: ${w.vervallen.map((t) => t.naam).join(', ')}.</p>` : ''}
+      <details class="week-aanpassen">
+        <summary>Dagen vrij zetten deze week</summary>
+        <div class="dagknoppen">${vrijKnoppen}</div>
+        <p class="hint">Een vrije dag laat eerst een rustige loop vervallen; kwaliteit en lange loop blijven zo lang mogelijk staan.</p>
+      </details>
+    </section>`;
+}
+
+export function toonSchema(root, profiel, { vandaag = vandaagIso(), opslag = localStorage } = {}) {
+  const basisplan = maakPlan(profiel, { vandaag });
+  let aanpassingen = laadAanpassingen(opslag);
+
+  function teken({ scroll = false, openWeek = null, openTraining = null } = {}) {
+    const plan = pasToe(basisplan, aanpassingen);
+    const huidige = plan.weken.find((w) => vandaag >= w.maandag && vandaag <= plusDagen(w.maandag, 6));
+    const start = plan.weken[0].maandag > vandaag
+      ? `<p class="uitleg">Je schema start op maandag ${korteDatum(plan.weken[0].maandag)}.</p>` : '';
+    root.innerHTML = `<h1>Schema</h1>${start}
+      <p class="hint">Tik op een training om de blokken te zien of hem naar een andere dag te verplaatsen.</p>
+      ${plan.weken.map((w) => weekHtml(w, aanpassingen, vandaag, profiel.gewicht, w === huidige)).join('')}`;
+    if (openWeek) root.querySelector(`#week-${openWeek} .week-aanpassen`)?.setAttribute('open', '');
+    if (openTraining) root.querySelector(`[data-training="${openTraining}"]`)?.setAttribute('open', '');
+    const doel = root.querySelector(openWeek ? `#week-${openWeek}` : '.week.is-huidig');
+    if (scroll || openWeek) doel?.scrollIntoView({ block: 'start' });
+  }
+
+  root.onclick = (e) => {
+    const knop = e.target.closest('button');
+    if (!knop || knop.disabled) return;
+    const week = knop.closest('.week')?.dataset.week;
+    if (knop.dataset.verplaats) {
+      aanpassingen = verplaats(pasToe(basisplan, aanpassingen), aanpassingen, knop.dataset.verplaats, knop.dataset.naar);
+      bewaarAanpassingen(opslag, aanpassingen);
+      teken({ openWeek: week, openTraining: knop.dataset.verplaats });
+      root.querySelector(`#week-${week} .week-aanpassen`)?.removeAttribute('open');
+    } else if (knop.dataset.vrij) {
+      aanpassingen = zetVrij(aanpassingen, knop.dataset.vrij, knop.getAttribute('aria-pressed') !== 'true');
+      bewaarAanpassingen(opslag, aanpassingen);
+      teken({ openWeek: week });
+    }
+  };
+  teken({ scroll: true });
 }

@@ -123,3 +123,12 @@ body.met-tabs main { padding-bottom: 100px; }
 .fases small { display: block; color: var(--zacht); font-size: 13px; }
 button.breed { width: 100%; margin-top: 12px; }
 button:disabled { opacity: .45; cursor: default; }
+.dagknoppen { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.dagknop { padding: 10px 0; font-size: 15px; background: var(--bg); color: var(--tekst); border: 1px solid var(--lijn); border-radius: 10px; }
+.dagknop.is-vrij { background: var(--fout); color: #fff; border-color: var(--fout); text-decoration: line-through; }
+.verplaats { padding: 0 16px 12px 74px; }
+.verplaats .hint { display: block; margin-bottom: 6px; }
+.week-aanpassen { margin-top: 8px; }
+.week-aanpassen summary { color: var(--accent); font-weight: 600; font-size: 15px; cursor: pointer; padding: 6px 0; }
+.week-aanpassen .dagknoppen { margin: 8px 0; }
+.week .melding { margin: 0 0 10px; }

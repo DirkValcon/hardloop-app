@@ -1,5 +1,6 @@
 // Scherm Vandaag: de training van vandaag (of de eerstvolgende) met duur, afstand en calorieën.
-import { maakPlan, volgendeTraining } from './schema.js';
+import { volgendeTraining } from './schema.js';
+import { huidigPlan } from './plan.js';
 import { kcalTraining } from './calorieen.js';
 import { vandaagIso, dagenTussen, datumTekst } from './datum.js';
 import { kmh, km, minuten, korteDatum } from './opmaak.js';
@@ -23,7 +24,7 @@ function fases(t) {
 }
 
 export function toonVandaag(root, profiel, { vandaag = vandaagIso() } = {}) {
-  const plan = maakPlan(profiel, { vandaag });
+  const plan = huidigPlan(profiel, vandaag);
   const volgende = volgendeTraining(plan, vandaag);
   if (!volgende) {
     root.innerHTML = `<h1>Vandaag</h1><div class="kaart"><p>Je schema zit erop. Gefeliciteerd met je 10 km!</p></div>`;
