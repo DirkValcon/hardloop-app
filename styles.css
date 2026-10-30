@@ -132,3 +132,31 @@ button:disabled { opacity: .45; cursor: default; }
 .week-aanpassen summary { color: var(--accent); font-weight: 600; font-size: 15px; cursor: pointer; padding: 6px 0; }
 .week-aanpassen .dagknoppen { margin: 8px 0; }
 .week .melding { margin: 0 0 10px; }
+body.loopmodus nav.tabs { display: none; }
+body.loopmodus main { padding-bottom: 24px; }
+.loop-kop { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 40px; }
+.loop-titel { font-size: 22px; font-weight: 700; }
+.loop-totaal { color: var(--zacht); font-variant-numeric: tabular-nums; }
+button.klein { padding: 8px 14px; font-size: 15px; }
+button.groot { font-size: 22px; padding: 18px; }
+.loop-groot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 4px; }
+.loop-groot > div { background: var(--kaart); border: 1px solid var(--lijn); border-radius: 18px; padding: 14px 10px; text-align: center; }
+.loop-groot .waarde { display: block; font-size: clamp(56px, 20vw, 96px); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.loop-groot .eenheid { color: var(--zacht); font-weight: 600; }
+.loop[data-soort=interval] .loop-groot > div:first-child, .loop[data-soort=tempo] .loop-groot > div:first-child { border-color: var(--accent); }
+.loop[data-soort=interval] .loop-groot .waarde, .loop[data-soort=tempo] .loop-groot .waarde { color: var(--accent); }
+.loop-tempo { text-align: center; color: var(--zacht); }
+.loop-timer { text-align: center; font-size: clamp(64px, 24vw, 120px); font-weight: 800; font-variant-numeric: tabular-nums; margin: 6px 0; }
+.loop.is-gepauzeerd .loop-timer { opacity: .4; }
+.loop-balk { display: flex; gap: 2px; height: 12px; margin: 10px 0 16px; }
+.seg { border-radius: 3px; background: var(--lijn); }
+.seg-interval, .seg-tempo { background: #ff7a3366; }
+.seg.gedaan { background: var(--zacht); }
+.seg.nu { background: var(--accent); outline: 2px solid var(--tekst); }
+.loop-volgende { text-align: center; padding: 12px; border-radius: 12px; background: var(--kaart); border: 1px solid var(--lijn); font-weight: 600; }
+.loop-volgende.is-aankondiging { background: var(--accent); color: var(--accent-tekst); border-color: var(--accent); }
+.loop .knoppen button { flex: 1; }
+.geluid-keuze { margin: 8px 0; }
+a.knop { display: block; text-align: center; text-decoration: none; font-weight: 600; padding: 14px 18px; border-radius: 14px; margin-top: 12px; }
+a.knop.primair { background: var(--accent); color: var(--accent-tekst); }
+a.knop.is-uit { opacity: .45; pointer-events: none; }

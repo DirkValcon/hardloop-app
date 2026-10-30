@@ -8,14 +8,16 @@ const { chromium, devices } = createRequire(import.meta.url)('playwright');
 
 export const SCREENSHOTS = process.env.SCREENSHOTS ?? 'tests/e2e/screenshots';
 
-export async function opzet({ vandaag = '2026-10-30', profiel = null } = {}) {
+export async function opzet({ vandaag = '2026-10-30', profiel = null, klokLoopt = false } = {}) {
   await mkdir(SCREENSHOTS, { recursive: true });
   const server = await startServer();
   const url = `http://127.0.0.1:${server.address().port}/`;
   const browser = await chromium.launch();
   const context = await browser.newContext({ ...devices['iPhone 13'], colorScheme: 'dark' });
   const page = await context.newPage();
-  await page.clock.setFixedTime(new Date(`${vandaag}T12:00:00`));
+  // Vaste datum; met klokLoopt kan de test de tijd zelf vooruitzetten (clock.runFor).
+  if (klokLoopt) await page.clock.install({ time: new Date(`${vandaag}T12:00:00`) });
+  else await page.clock.setFixedTime(new Date(`${vandaag}T12:00:00`));
   if (profiel) {
     await page.addInitScript((p) => localStorage.setItem('hardloop-app.profiel.v1', JSON.stringify(p)), profiel);
   }

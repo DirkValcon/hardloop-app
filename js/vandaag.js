@@ -54,7 +54,7 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso() } = {}) {
         <li><span>${f.naam}<small>${minuten(f.duur)}</small></span><span class="blok-waarden"><strong>${f.snelheid}</strong> km/u</span></li>`).join('')}
       </ol>
       <p class="hint">Helling ${String(profiel.helling).replace('.', ',')}% · uitwandelen op 0%</p>
-      <button type="button" class="primair breed" data-actie="start" ${isVandaag ? '' : 'disabled'}>Start op loopband</button>
+      <a class="knop primair breed${isVandaag ? '' : ' is-uit'}" ${isVandaag ? `href="#loop/${t.id}"` : 'aria-disabled="true"'} role="button" data-actie="start">Start op loopband</a>
     </article>
     <p class="hint" data-test="tot-doel">Nog ${totDoel} ${totDoel === 1 ? 'dag' : 'dagen'} tot je 10 km op ${datumTekst(plan.doelDatum)}.</p>`;
 }
