@@ -22,10 +22,18 @@ try {
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
   await page.evaluate(() => navigator.serviceWorker.ready);
+  // Een nieuwe versie online komt meteen door, niet pas na een keer extra openen.
+  await context.route(/\/(index\.html)?$/, async (r) => {
+    const antwoord = await r.fetch();
+    await r.fulfill({ response: antwoord, body: (await antwoord.text()).replace('<title>Loopschema</title>', '<title>Loopschema nieuw</title>') });
+  });
+  await page.reload();
+  assert.equal(await page.title(), 'Loopschema nieuw');
+  await context.unroute(/\/(index\.html)?$/);
   await context.setOffline(true);
   await page.reload();
   assert.match(await page.textContent('h1'), /5 km-tijd/);
-  console.log('✓ offline: de app laadt zonder internet');
+  console.log('✓ offline: de app laadt zonder internet en toont online direct de nieuwste versie');
 } finally {
   await browser.close();
   server.close();
