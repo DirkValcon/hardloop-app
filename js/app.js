@@ -2,10 +2,13 @@ import { laadProfiel } from './profiel.js';
 import { toonOnboarding } from './onboarding.js';
 import { toonOverzicht } from './overzicht.js';
 import { toonSchema } from './schemaweergave.js';
+import { toonVandaag } from './vandaag.js';
 
 const root = document.getElementById('app');
 
 const TABS = [
+  { id: 'vandaag', naam: 'Vandaag', toon: toonVandaag,
+    icoon: '<circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>' },
   { id: 'schema', naam: 'Schema', toon: toonSchema,
     icoon: '<path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>' },
   { id: 'profiel', naam: 'Profiel', toon: toonOverzicht,
@@ -30,7 +33,7 @@ function toonTab(profiel) {
 export function start() {
   const profiel = laadProfiel(localStorage);
   if (!profiel) {
-    toonOnboarding(root, () => { location.hash = '#schema'; start(); });
+    toonOnboarding(root, () => { location.hash = '#vandaag'; start(); });
     return;
   }
   toonTab(profiel);

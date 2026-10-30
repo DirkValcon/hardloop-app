@@ -67,8 +67,8 @@ try {
   await shot('5-gewicht');
   await volgende();
 
-  // Na de onboarding verschijnt het schema; het profiel staat onder de tab Profiel, ook na herladen.
-  await page.waitForSelector('h1:text("Schema")');
+  // Na de onboarding verschijnt Vandaag; het profiel staat onder de tab Profiel, ook na herladen.
+  await page.waitForSelector('h1:text-is("Vandaag")');
   await page.getByRole('link', { name: 'Profiel' }).click();
   const controleer = async () => {
     const tekst = await page.textContent('[data-test=samenvatting]');

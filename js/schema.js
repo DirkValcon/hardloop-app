@@ -219,3 +219,13 @@ function laatsteWeek(trainingen, profiel, b) {
   }
   return [...resultaat, race].sort((a, c) => a.datum.localeCompare(c.datum));
 }
+
+// De training van vandaag, of anders de eerstvolgende. Null als het schema voorbij is.
+export function volgendeTraining(plan, vandaag) {
+  for (const week of plan.weken) {
+    for (const t of week.trainingen) {
+      if (t.datum >= vandaag) return { training: t, week, isVandaag: t.datum === vandaag };
+    }
+  }
+  return null;
+}

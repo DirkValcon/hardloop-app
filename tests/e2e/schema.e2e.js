@@ -4,7 +4,7 @@ import { opzet, DIRK } from './helpers.js';
 
 const { page, url, fouten, shot, sluit } = await opzet({ profiel: { ...DIRK, doelDatum: '2027-01-17' } });
 try {
-  await page.goto(url);
+  await page.goto(url + '#schema');
   assert.equal(await page.textContent('h1'), 'Schema');
   assert.match(await page.textContent('main'), /Je schema start op maandag 2 nov/);
   assert.equal(await page.locator('section.week').count(), 11);

@@ -118,3 +118,15 @@ test('basisweken worden vóór het schema gezet; bij later starten niet', () => 
 test('sjabloon is compleet voor 11 weken', () => {
   for (const k of ['rustig', 'lang', 'extraRustig', 'kwaliteit']) assert.equal(SJABLOON_5_10[k].length, 11, k);
 });
+
+test('volgendeTraining: vandaag, anders de eerstvolgende, null na afloop', async () => {
+  const { volgendeTraining } = await import('../js/schema.js');
+  const plan = maakPlan(DIRK, { vandaag: VANDAAG });
+  assert.equal(volgendeTraining(plan, '2026-11-03').isVandaag, true);           // di week 1
+  assert.equal(volgendeTraining(plan, '2026-11-03').training.type, 'rustig');
+  const woensdag = volgendeTraining(plan, '2026-11-04');
+  assert.equal(woensdag.isVandaag, false);
+  assert.equal(woensdag.training.datum, '2026-11-05');
+  assert.equal(volgendeTraining(plan, VANDAAG).training.datum, '2026-11-03');  // voor de start
+  assert.equal(volgendeTraining(plan, '2027-01-18'), null);
+});
