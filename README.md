@@ -22,5 +22,5 @@ npm run serve     # lokaal bekijken op http://127.0.0.1:8080/
 | 5 | Dagen verschuiven per week | klaar |
 | 6 | Trainingsscherm loopband | klaar |
 | 7 | Training afvinken + calorieën | klaar |
-| 8 | Voortgang | |
+| 8 | Voortgang | klaar |
 | 9 | Instellingen wijzigen | |

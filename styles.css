@@ -174,3 +174,23 @@ a.knop.secundair { background: var(--kaart); color: var(--tekst); border: 1px so
 .training.is-overgeslagen .wat { text-decoration: line-through; opacity: .6; }
 .status { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px 12px 74px; }
 a.knop.klein { padding: 8px 14px; font-size: 15px; margin: 0; }
+.tegels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tegel { background: var(--kaart); border: 1px solid var(--lijn); border-radius: 16px; padding: 14px; }
+.tegel strong { display: block; font-size: 28px; font-variant-numeric: tabular-nums; }
+.tegel small { color: var(--zacht); }
+.voortgangsbalk { height: 8px; border-radius: 4px; background: var(--lijn); margin: 14px 0 4px; overflow: hidden; }
+.voortgangsbalk span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.grafiek-detail { min-height: 44px; font-size: 15px; color: var(--zacht); }
+.grafiek-detail strong { color: var(--tekst); }
+.staven { display: flex; align-items: flex-end; gap: 2px; height: 160px; border-bottom: 1px solid var(--lijn); }
+.staaf { flex: 1; height: 100%; position: relative; padding: 0; background: none; border-radius: 0; }
+.staaf span { position: absolute; left: 15%; right: 15%; bottom: 0; border-radius: 4px 4px 0 0; }
+.staaf-plan { border: 1px dashed var(--zacht); border-bottom: 0; }
+.staaf-gedaan { background: var(--accent); }
+.staaf.is-gekozen .staaf-plan { border-color: var(--tekst); border-style: solid; }
+.staaf-labels { display: flex; gap: 2px; margin-top: 4px; }
+.staaf-labels span { flex: 1; text-align: center; font-size: 11px; color: var(--zacht); }
+.legenda { display: flex; gap: 16px; margin-top: 10px; font-size: 13px; color: var(--zacht); }
+.legenda i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.l-gedaan { background: var(--accent); }
+.l-plan { border: 1px dashed var(--zacht); }

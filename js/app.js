@@ -3,6 +3,7 @@ import { toonOnboarding } from './onboarding.js';
 import { toonOverzicht } from './overzicht.js';
 import { toonSchema } from './schemaweergave.js';
 import { toonVandaag } from './vandaag.js';
+import { toonVoortgang } from './voortgangweergave.js';
 import { toonLoopscherm } from './loopscherm.js';
 import { huidigPlan } from './plan.js';
 import { vandaagIso } from './datum.js';
@@ -16,6 +17,8 @@ const TABS = [
     icoon: '<circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>' },
   { id: 'schema', naam: 'Schema', toon: toonSchema,
     icoon: '<path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>' },
+  { id: 'voortgang', naam: 'Voortgang', toon: toonVoortgang,
+    icoon: '<path d="M5 20V12M12 20V5M19 20v-9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>' },
   { id: 'profiel', naam: 'Profiel', toon: toonOverzicht,
     icoon: '<circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>' },
 ];
