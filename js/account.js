@@ -47,6 +47,22 @@ export async function uitloggen() {
   await sb().auth.signOut({ scope: 'local' });
 }
 
+// Tabel app_gegevens in Supabase: één rij per onderdeel (profiel, aanpassingen, resultaten).
+export function accountGegevens(gebruikerId) {
+  return {
+    async haal() {
+      const { data, error } = await sb().from('app_gegevens').select('naam, waarde, bijgewerkt');
+      if (error) throw error;
+      return data;
+    },
+    async bewaar(naam, waarde, bijgewerkt) {
+      const { error } = await sb().from('app_gegevens')
+        .upsert({ user_id: gebruikerId, naam, waarde, bijgewerkt }, { onConflict: 'user_id,naam' });
+      if (error) throw error;
+    },
+  };
+}
+
 export function inlogschermHtml({ fout } = {}) {
   const klaar = ingesteld();
   return `

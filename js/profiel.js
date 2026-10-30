@@ -1,6 +1,7 @@
 // Profiel en doel: controleren, opslaan en laden.
 import { parseTijd } from './tijd.js';
 import { dagenTussen, plusDagen } from './datum.js';
+import { meldOpgeslagen } from './opgeslagen.js';
 
 export const SCHEMA_WEKEN = 11;
 export const DAGEN = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
@@ -118,4 +119,5 @@ export function laadProfiel(opslag) {
 
 export function bewaarProfiel(opslag, profiel) {
   opslag.setItem(OPSLAG_SLEUTEL, JSON.stringify(profiel));
+  meldOpgeslagen(OPSLAG_SLEUTEL);
 }

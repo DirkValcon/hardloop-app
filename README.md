@@ -12,6 +12,10 @@ Geen build-stap: gewone HTML, CSS en JavaScript-modules. Inloggen met Google via
 
 Je gegevens staan alleen op je telefoon. Verwijder je de app van het beginscherm, dan zijn ze weg.
 
+## Supabase eenmalig instellen
+
+Voer `supabase/app_gegevens.sql` uit in de SQL Editor van je Supabase-project. Daarin staan je profiel, aanpassingen en afgevinkte trainingen; alleen jij kunt je eigen rijen lezen.
+
 ## Testen
 
 ```
@@ -33,4 +37,4 @@ npm run serve     # lokaal bekijken op http://127.0.0.1:8080/
 | 8 | Voortgang | klaar |
 | 9 | Instellingen wijzigen | klaar |
 | 12 | Inloggen met Google (verplicht) | klaar |
-| 13 | Gegevens synchroniseren tussen apparaten | gepland |
+| 13 | Gegevens synchroniseren tussen apparaten | klaar |

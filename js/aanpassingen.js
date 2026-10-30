@@ -2,6 +2,7 @@
 // Bewaard als { verplaatst: { trainingId: datum }, vrij: [datum, ...] }.
 import { DAGEN } from './profiel.js';
 import { naarDatum, plusDagen } from './datum.js';
+import { meldOpgeslagen } from './opgeslagen.js';
 
 export const OPSLAG_AANPASSINGEN = 'hardloop-app.aanpassingen.v1';
 const ZWAAR = ['kwaliteit', 'lang', 'doel'];
@@ -26,6 +27,7 @@ export function laadAanpassingen(opslag) {
 
 export function bewaarAanpassingen(opslag, a) {
   opslag.setItem(OPSLAG_AANPASSINGEN, JSON.stringify(a));
+  meldOpgeslagen(OPSLAG_AANPASSINGEN);
 }
 
 // Verplaats een training naar een andere dag van dezelfde week. Staat daar al een training, dan ruilen ze.

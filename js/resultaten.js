@@ -1,5 +1,6 @@
 // Resultaten per training: gedaan of overgeslagen, met afstand, duur en calorieën.
 import { kcalBlok } from './calorieen.js';
+import { meldOpgeslagen } from './opgeslagen.js';
 
 export const OPSLAG_RESULTATEN = 'hardloop-app.resultaten.v1';
 
@@ -14,6 +15,7 @@ export function laadResultaten(opslag) {
 
 function bewaar(opslag, r) {
   opslag.setItem(OPSLAG_RESULTATEN, JSON.stringify(r));
+  meldOpgeslagen(OPSLAG_RESULTATEN);
   return r;
 }
 

@@ -1,12 +1,12 @@
 // Service worker: de app werkt ook zonder internet (bijvoorbeeld in de sportschool).
 // Eerst uit de cache, op de achtergrond bijwerken; verhoog VERSIE bij een nieuwe release.
-const VERSIE = 'loopschema-v3';
+const VERSIE = 'loopschema-v4';
 const BESTANDEN = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'vendor/supabase.js',
   'js/app.js', 'js/account.js', 'js/afronden.js', 'js/aanpassingen.js', 'js/calorieen.js', 'js/config.js', 'js/datum.js', 'js/instellingen.js',
-  'js/loopscherm.js', 'js/onboarding.js', 'js/opmaak.js', 'js/overzicht.js', 'js/plan.js', 'js/profiel.js',
-  'js/resultaten.js', 'js/schema.js', 'js/schemaweergave.js', 'js/speler.js', 'js/tijd.js', 'js/vandaag.js',
+  'js/loopscherm.js', 'js/onboarding.js', 'js/opgeslagen.js', 'js/opmaak.js', 'js/overzicht.js', 'js/plan.js', 'js/profiel.js',
+  'js/resultaten.js', 'js/schema.js', 'js/schemaweergave.js', 'js/speler.js', 'js/sync.js', 'js/tijd.js', 'js/vandaag.js',
   'js/voortgang.js', 'js/voortgangweergave.js', 'js/zones.js', 'js/zonesweergave.js',
 ];
 
