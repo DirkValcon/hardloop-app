@@ -14,6 +14,9 @@ try {
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Volgend blok' }).click();
   await page.waitForSelector('[data-test=afronden]');
+  // Alles overgeslagen, dus de app telt 0 km; de afstand van de loopband vul je zelf in.
+  await page.fill('#afstandKm', '6,6');
+  await page.fill('#duurMin', '57');
   await page.getByRole('button', { name: 'Opslaan als gedaan' }).click();
 
   // Vandaag: gedaan op woensdag, en de volgende training is de kwaliteitstraining van donderdag.
