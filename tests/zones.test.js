@@ -55,3 +55,11 @@ test('elke zone heeft een oplopende of gelijke snelheid en tempo klopt', () => {
     bijna(tempoPerKm(z.van) * z.van, 3600, 1e-6);
   }
 });
+
+test('eigen snelheden gaan voor de berekende', () => {
+  const z = opId(berekenZones(2100, 4200, { rustig: 8.5, tempo5: 9.2 }));
+  assert.equal(z.rustig.van, 8.5); assert.equal(z.rustig.tot, 8.5); assert.equal(z.rustig.eigen, true);
+  assert.equal(z.tempo5.van, 9.2);
+  assert.equal(z.tempo10.van, 8.6); // niet ingevuld: berekend
+  assert.equal(z.tempo10.eigen, undefined);
+});

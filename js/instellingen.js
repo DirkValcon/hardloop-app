@@ -8,12 +8,25 @@ import { valideerVeld, extraWeken, DAGEN } from './profiel.js';
 import { parseTijd } from './tijd.js';
 import { maandagVan, profielVoorWeek, maakPlan } from './schema.js';
 import { plusDagen } from './datum.js';
+import { EIGEN_ZONES } from './zones.js';
 
-const VANAF_DEZE_WEEK = ['vijfKmSeconden', 'doelSeconden', 'helling'];
+const VANAF_DEZE_WEEK = ['vijfKmSeconden', 'doelSeconden', 'helling', 'eigenSnelheden'];
 const VANAF_VOLGENDE_WEEK = ['trainingsdagen'];
 
 export function effectiefProfiel(profiel, vandaag) {
   return profielVoorWeek(profiel, maandagVan(vandaag));
+}
+
+const getal = (v) => Number(String(v).replace(',', '.'));
+
+// Eigen snelheden: leeg betekent "laat de app rekenen".
+export function leesEigenSnelheden(invoer) {
+  const eigen = {};
+  for (const z of EIGEN_ZONES) {
+    const v = String(invoer.eigen?.[z] ?? '').trim();
+    if (v) eigen[z] = Math.round(getal(v) * 10) / 10;
+  }
+  return eigen;
 }
 
 export function valideerWijziging(profiel, invoer, vandaag) {
@@ -24,6 +37,10 @@ export function valideerWijziging(profiel, invoer, vandaag) {
     const fout = valideerVeld(v, invoer, vandaag);
     if (fout) fouten[v] = fout;
   }
+  for (const z of EIGEN_ZONES) {
+    const v = String(invoer.eigen?.[z] ?? '').trim();
+    if (v && !(getal(v) >= 3 && getal(v) <= 25)) fouten[`eigen-${z}`] = 'Een snelheid tussen 3 en 25 km/u, of leeg laten.';
+  }
   return fouten;
 }
 
@@ -33,6 +50,7 @@ export function wijzigProfiel(profiel, invoer, vandaag) {
     doelSeconden: invoer.doelTijd ? parseTijd(invoer.doelTijd) : null,
     helling: Number(invoer.helling),
     trainingsdagen: DAGEN.filter((d) => invoer.trainingsdagen.includes(d)),
+    eigenSnelheden: leesEigenSnelheden(invoer),
   };
   let resultaat = { ...profiel, gewicht: Number(invoer.gewicht) };
 
@@ -49,7 +67,7 @@ export function wijzigProfiel(profiel, invoer, vandaag) {
   const volgendeWeek = plusDagen(dezeWeek, 7);
   const historie = [...(resultaat.historie ?? [])];
   const zet = (vanaf, velden) => {
-    const gewijzigd = Object.fromEntries(velden.filter((v) => JSON.stringify(nieuw[v]) !== JSON.stringify(nu[v])).map((v) => [v, nieuw[v]]));
+    const gewijzigd = Object.fromEntries(velden.filter((v) => JSON.stringify(nieuw[v]) !== JSON.stringify(nu[v] ?? (v === 'eigenSnelheden' ? {} : undefined))).map((v) => [v, nieuw[v]]));
     if (!Object.keys(gewijzigd).length) return;
     // Latere wijzigingen van dezelfde velden vervallen: de nieuwe keuze geldt vanaf nu.
     for (const h of historie) if (h.vanaf >= vanaf) for (const v of Object.keys(gewijzigd)) delete h[v];

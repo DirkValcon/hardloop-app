@@ -1,11 +1,14 @@
 // Scherm Profiel: je gegevens, je snelheden en het formulier om ze te wijzigen.
-import { formatTijd } from './tijd.js';
+import { formatTijd, parseTijd } from './tijd.js';
 import { datumTekst, vandaagIso, plusDagen } from './datum.js';
 import { haalbaarheidHtml, zonesHtml } from './zonesweergave.js';
 import { DAGEN, bewaarProfiel, extraWeken, vroegsteDoeldatum } from './profiel.js';
 import { effectiefProfiel, valideerWijziging, wijzigProfiel } from './instellingen.js';
 import { maandagVan } from './schema.js';
-import { korteDatum } from './opmaak.js';
+import { korteDatum, kmh } from './opmaak.js';
+import { berekenZones, EIGEN_ZONES } from './zones.js';
+
+const parseTijdVeilig = (tekst, standaard) => parseTijd(tekst ?? '') ?? standaard;
 
 const DAGNAMEN = { ma: 'maandag', di: 'dinsdag', wo: 'woensdag', do: 'donderdag', vr: 'vrijdag', za: 'zaterdag', zo: 'zondag' };
 
@@ -38,8 +41,8 @@ function overzichtHtml(profiel, vandaag) {
     <h2>Je doel</h2>
     ${haalbaarheidHtml(p.vijfKmSeconden, p.doelSeconden)}
     <h2>Je snelheden op de loopband</h2>
-    <div class="kaart">${zonesHtml(p.vijfKmSeconden, p.doelSeconden)}</div>
-    <p class="hint">Rustige snelheden komen uit je huidige 5 km-tijd, snelle uit je doeltijd.</p>`;
+    <div class="kaart">${zonesHtml(p.vijfKmSeconden, p.doelSeconden, p.eigenSnelheden)}</div>
+    <p class="hint">Rustige snelheden komen uit je huidige 5 km-tijd, snelle uit je doeltijd. Eigen snelheden stel je in onder Wijzigen.</p>`;
 }
 
 function formulierHtml(invoer, profiel, vandaag, fouten = {}) {
@@ -73,6 +76,16 @@ function formulierHtml(invoer, profiel, vandaag, fouten = {}) {
         <input type="number" inputmode="decimal" id="gewicht" name="gewicht" step="0.1" value="${invoer.gewicht}" ${ongeldig('gewicht')}>${fout('gewicht')}</div>
       <div class="veld"><label class="titel" for="helling">Standaardhelling (%)</label>
         <input type="number" inputmode="decimal" id="helling" name="helling" step="0.5" value="${invoer.helling}" ${ongeldig('helling')}>${fout('helling')}</div>
+      <fieldset class="veld eigen-snelheden" style="border:0;padding:0;margin:0 0 18px">
+        <legend class="titel">Eigen snelheden (km/u)</legend>
+        <div class="hint" style="margin-bottom:8px">Leeg laten = de app rekent het uit (grijs voorbeeld). Tijdens een training kun je nog bijstellen met + en −.</div>
+        ${EIGEN_ZONES.map((z) => {
+          const berekend = berekenZones(parseTijdVeilig(invoer.vijfKmTijd, profiel.vijfKmSeconden), parseTijdVeilig(invoer.doelTijd, null)).find((x) => x.id === z);
+          return `<div class="eigen-rij"><label for="eigen-${z}">${berekend.naam}<small>${berekend.gebruik}</small></label>
+            <input type="text" inputmode="decimal" id="eigen-${z}" name="eigen-${z}" value="${invoer.eigen?.[z] ?? ''}"
+              placeholder="${kmh(berekend.van)}" ${ongeldig(`eigen-${z}`)}>${fout(`eigen-${z}`)}</div>`;
+        }).join('')}
+      </fieldset>
       <p class="hint">Snelheden en helling gelden vanaf deze week. Trainingen die je al gedaan hebt blijven staan.</p>
       <div class="knoppen">
         <button type="button" class="secundair" data-actie="annuleer">Annuleren</button>
@@ -94,6 +107,7 @@ export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = 
       vijfKmTijd: formatTijd(p.vijfKmSeconden), doelTijd: p.doelSeconden ? formatTijd(p.doelSeconden) : '',
       doelDatum: profiel.doelDatum, extraWekenKeuze: profiel.extraWekenKeuze,
       trainingsdagen: volgende?.trainingsdagen ?? p.trainingsdagen, gewicht: String(profiel.gewicht), helling: String(p.helling),
+      eigen: Object.fromEntries(Object.entries(p.eigenSnelheden ?? {}).map(([z, v]) => [z, kmh(v)])),
     };
     root.innerHTML = formulierHtml(invoer, profiel, vandaag, fouten);
     const form = root.querySelector('form');
@@ -103,6 +117,7 @@ export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = 
         vijfKmTijd: d.get('vijfKmTijd').trim(), doelTijd: d.get('doelTijd').trim(), doelDatum: d.get('doelDatum'),
         extraWekenKeuze: d.get('extraWekenKeuze') ?? invoer.extraWekenKeuze, trainingsdagen: d.getAll('trainingsdagen'),
         gewicht: d.get('gewicht'), helling: d.get('helling'),
+        eigen: Object.fromEntries(EIGEN_ZONES.map((z) => [z, d.get(`eigen-${z}`) ?? ''])),
       };
     };
     form.querySelector('#doelDatum').addEventListener('change', () => toonFormulier(lees()));

@@ -137,9 +137,9 @@ export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagI
   const cache = new Map();
   const opWeek = (maandag) => {
     const p = profielVoorWeek(profiel, maandag);
-    const sleutel = JSON.stringify([p.vijfKmSeconden, p.doelSeconden, p.helling, p.trainingsdagen]);
+    const sleutel = JSON.stringify([p.vijfKmSeconden, p.doelSeconden, p.helling, p.trainingsdagen, p.eigenSnelheden]);
     if (!cache.has(sleutel)) {
-      const zones = berekenZones(p.vijfKmSeconden, p.doelSeconden);
+      const zones = berekenZones(p.vijfKmSeconden, p.doelSeconden, p.eigenSnelheden);
       const indeling = verdeelDagen(p.trainingsdagen);
       cache.set(sleutel, { p, zones, b: maakBouwer(zones, p.helling), indeling, dagen: Object.keys(indeling) });
     }

@@ -130,3 +130,12 @@ test('volgendeTraining: vandaag, anders de eerstvolgende, null na afloop', async
   assert.equal(volgendeTraining(plan, VANDAAG).training.datum, '2026-11-03');  // voor de start
   assert.equal(volgendeTraining(plan, '2027-01-18'), null);
 });
+
+test('eigen snelheden komen in de trainingen terecht', () => {
+  const plan = maakPlan({ ...DIRK, eigenSnelheden: { rustig: 8.5, tempo5: 9.2 } }, { vandaag: VANDAAG });
+  const w1 = plan.weken[0].trainingen;
+  assert.ok(w1[0].blokken.filter((b) => b.soort === 'rustig').every((b) => b.kmh === 8.5));
+  const kwal = w1.find((t) => t.type === 'kwaliteit');
+  assert.ok(kwal.blokken.filter((b) => b.soort === 'interval').every((b) => b.kmh === 9.2));
+  assert.ok(kwal.blokken.filter((b) => b.soort === 'herstel').every((b) => b.kmh === 8.5));
+});

@@ -18,10 +18,10 @@ export function haalbaarheidHtml(vijfKmSeconden, doelSeconden) {
   return `<div class="melding melding-${b.niveau}" data-test="haalbaarheid" data-niveau="${b.niveau}">${tekst}</div>`;
 }
 
-export function zonesHtml(vijfKmSeconden, doelSeconden) {
-  const rijen = berekenZones(vijfKmSeconden, doelSeconden).map((z) => `
+export function zonesHtml(vijfKmSeconden, doelSeconden, eigen = {}) {
+  const rijen = berekenZones(vijfKmSeconden, doelSeconden, eigen).map((z) => `
     <tr data-zone="${z.id}">
-      <th scope="row">${z.naam}<small>${z.gebruik}</small></th>
+      <th scope="row">${z.naam}${z.eigen ? ' <span class="badge">eigen</span>' : ''}<small>${z.gebruik}</small></th>
       <td><span class="kmh">${z.van === z.tot ? kmh(z.van) : `${kmh(z.van)}–${kmh(z.tot)}`}</span> km/u
         <small>${z.van === z.tot ? tempo(z.van) : `${tempo(z.van)}–${tempo(z.tot)}`} /km</small></td>
     </tr>`).join('');
