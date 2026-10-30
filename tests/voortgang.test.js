@@ -37,3 +37,18 @@ test('zonder resultaten is alles nul', () => {
   assert.equal(v.totaalKm, 0);
   assert.equal(v.langste, null);
 });
+
+test('statistieken: per maand, deze week, deze maand en gemiddeld tempo op de echte loopdag', () => {
+  const r = {
+    ...resultaten,
+    'w4-lang': { status: 'gedaan', afstandKm: 5.4, duurSec: 2520, kcal: 430, datum: '2026-10-31' }, // eerder gelopen
+  };
+  const v = berekenVoortgang(plan, r, DIRK, '2026-11-11');
+  assert.deepEqual(v.perMaand.map((m) => [m.label, m.km, m.aantal]), [['oktober 2026', 5.4, 1], ['november 2026', 18.5, 3]]);
+  assert.equal(v.kmDezeWeek, 6.1);   // week van 9 nov
+  assert.equal(v.kmDezeMaand, 18.5);
+  assert.deepEqual(v.gelopen.map((g) => g.datum), ['2026-11-10', '2026-11-08', '2026-11-03', '2026-10-31']);
+  assert.equal(v.gelopen[0].naam, 'Rustige duurloop 4,5 km');
+  assert.ok(Math.abs(v.gemiddeldTempo - (2940 + 3500 + 3200 + 2520) / 23.9) < 1e-6);
+  assert.equal(berekenVoortgang(plan, {}, DIRK, '2026-11-11').gemiddeldTempo, null);
+});

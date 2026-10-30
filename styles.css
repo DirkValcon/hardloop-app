@@ -213,3 +213,12 @@ button.google svg { width: 20px; height: 20px; }
 .account-email { margin: 0 0 4px; overflow-wrap: anywhere; }
 .loop[data-soort=extra] .loop-timer { color: #2f9e44; }
 .loop .knoppen [hidden] { display: none; }
+.stat-tabel { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.stat-tabel th, .stat-tabel td { padding: 8px 0; border-top: 1px solid var(--lijn); text-align: right; }
+.stat-tabel thead th { border-top: 0; color: var(--zacht); font-size: 13px; font-weight: 600; }
+.stat-tabel th:first-child { text-align: left; }
+.stat-tabel tbody th { font-weight: 600; }
+.gelopen { list-style: none; margin: 0; padding: 0; }
+.gelopen li { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--lijn); }
+.gelopen li:first-child { border-top: 0; }
+.gelopen small { display: block; color: var(--zacht); font-size: 13px; }

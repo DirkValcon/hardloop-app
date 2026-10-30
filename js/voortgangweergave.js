@@ -5,7 +5,7 @@ import { effectiefProfiel } from './instellingen.js';
 import { laadResultaten } from './resultaten.js';
 import { vandaagIso, datumTekst } from './datum.js';
 import { formatTijd } from './tijd.js';
-import { km, korteDatum } from './opmaak.js';
+import { km, korteDatum, minuten } from './opmaak.js';
 
 export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = localStorage } = {}) {
   const plan = huidigPlan(profiel, vandaag, opslag);
@@ -24,7 +24,7 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
   const doel = v.doelSeconden ? ` · doel ${formatTijd(v.doelSeconden)}` : '';
 
   root.innerHTML = `
-    <h1>Voortgang</h1>
+    <h1>Voortgang en statistieken</h1>
     <div class="tegels" data-test="tegels">
       <div class="tegel"><strong data-test="totaal-km">${km(v.totaalKm)}</strong><small>km gelopen</small></div>
       <div class="tegel"><strong data-test="totaal-kcal">${v.totaalKcal}</strong><small>kcal verbruikt</small></div>
@@ -40,6 +40,28 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
       <div class="staven" data-test="staven">${staven}</div>
       <div class="staaf-labels">${labels}</div>
       <div class="legenda"><span><i class="l-gedaan"></i>Gelopen</span><span><i class="l-plan"></i>Gepland</span></div>
+    </div>
+
+    <h2>Statistieken</h2>
+    <div class="tegels" data-test="stat-tegels">
+      <div class="tegel"><strong data-test="km-week">${km(v.kmDezeWeek)}</strong><small>km deze week</small></div>
+      <div class="tegel"><strong data-test="km-maand">${km(v.kmDezeMaand)}</strong><small>km deze maand</small></div>
+      <div class="tegel"><strong data-test="tempo">${v.gemiddeldTempo ? formatTijd(v.gemiddeldTempo) : '–'}</strong><small>gemiddeld per km</small></div>
+      <div class="tegel"><strong data-test="km-totaal">${km(v.totaalKm)}</strong><small>km in totaal</small></div>
+    </div>
+    ${v.perMaand.length ? `
+    <div class="kaart">
+      <table class="stat-tabel" data-test="per-maand">
+        <thead><tr><th scope="col">Maand</th><th scope="col">km</th><th scope="col">Trainingen</th><th scope="col">kcal</th></tr></thead>
+        <tbody>${v.perMaand.map((m) => `<tr><th scope="row">${m.label}</th><td>${km(m.km)}</td><td>${m.aantal}</td><td>${m.kcal}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>` : ''}
+    <h2>Gelopen trainingen</h2>
+    <div class="kaart">${v.gelopen.length ? `
+      <ol class="gelopen" data-test="gelopen">${v.gelopen.map((g) => `
+        <li><span>${g.naam}<small>${korteDatum(g.datum)} · ${minuten(g.duurSec)} · ${g.kcal} kcal</small></span>
+          <span class="blok-waarden"><strong>${km(g.afstandKm)}</strong> km<small>${formatTijd(g.duurSec / g.afstandKm)} /km</small></span></li>`).join('')}
+      </ol>` : '<p class="hint">Nog geen trainingen gelopen.</p>'}
     </div>
 
     <h2>Records en voorspelling</h2>

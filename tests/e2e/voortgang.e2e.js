@@ -22,6 +22,16 @@ try {
   assert.equal(await page.locator('.staaf').count(), 11);
   await page.locator('.staaf').first().click();
   assert.match(await lees('grafiek-detail'), /Week 1 · 12,4 van [\d,]+ km · 1010 kcal · 2\/3 trainingen/);
+  // Statistieken.
+  assert.equal(await lees('km-week'), '6,1');
+  assert.equal(await lees('km-maand'), '18,5');
+  assert.equal(await lees('km-totaal'), '18,5');
+  assert.match(await lees('tempo'), /^8:41$/);
+  const maand = await page.locator('[data-test=per-maand] tbody tr').first().locator('th, td').allTextContents();
+  assert.deepEqual(maand, ['november 2026', '18,5', '3', '1510']);
+  const gelopen = await page.locator('[data-test=gelopen] li').allTextContents();
+  assert.equal(gelopen.length, 3);
+  assert.match(gelopen[0].replace(/\s+/g, ' '), /Rustige duurloop 4,5 km ?10 nov · 53 min · 500 kcal ?6,1 km ?8:45 \/km/);
   await shot('story8-voortgang');
   assert.deepEqual(fouten, []);
   console.log('✓ story 8 voortgang: alle browserchecks geslaagd');
