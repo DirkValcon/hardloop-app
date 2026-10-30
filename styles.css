@@ -207,3 +207,7 @@ a.knop.klein { padding: 8px 14px; font-size: 15px; margin: 0; }
 .eigen-rij label small { display: block; color: var(--zacht); font-weight: 400; font-size: 13px; }
 .eigen-rij input { font-size: 18px; padding: 10px; text-align: right; }
 .eigen-rij .foutmelding { grid-column: 1 / -1; }
+.inloggen { min-height: 70vh; display: flex; flex-direction: column; justify-content: center; }
+button.google { display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; color: #1f1f1f; border: 1px solid #dadce0; }
+button.google svg { width: 20px; height: 20px; }
+.account-email { margin: 0 0 4px; overflow-wrap: anywhere; }
