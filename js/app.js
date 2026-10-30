@@ -59,7 +59,16 @@ function toonTab(profiel) {
   root.onclick = null;
   const tab = TABS.find((t) => t.id === id) ?? TABS[0];
   document.body.classList.add('met-tabs');
-  tab.toon(root, profiel);
+  try {
+    tab.toon(root, profiel);
+  } catch (fout) {
+    // Laat zien wat er misging in plaats van een leeg of oud scherm.
+    root.onclick = null;
+    root.innerHTML = `<h1>${tab.naam}</h1><p class="uitleg">Dit scherm kon niet geopend worden.</p>
+      <p class="hint" data-test="tabfout">Foutmelding: </p>`;
+    root.querySelector('[data-test=tabfout]').append(String(fout?.message ?? fout));
+    console.error(fout);
+  }
   let nav = document.querySelector('nav.tabs');
   if (!nav) {
     nav = document.createElement('nav');
