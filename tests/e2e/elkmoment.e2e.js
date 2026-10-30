@@ -13,6 +13,7 @@ try {
   assert.match(await tekst('main'), /Lange duurloop 5 km/);
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   for (let i = 0; i < 6; i++) await page.getByRole('button', { name: 'Volgend blok' }).click();
+  await page.getByRole('button', { name: 'Training afronden' }).click();
   await page.waitForSelector('[data-test=afronden]');
   // Alles overgeslagen, dus de app telt 0 km; de afstand van de loopband vul je zelf in.
   await page.fill('#afstandKm', '6,6');

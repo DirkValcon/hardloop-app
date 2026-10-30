@@ -17,8 +17,9 @@ test('blokken volgen elkaar op met de juiste resttijd', () => {
   assert.equal(toestand(s, sec(60)).index, 1);
   assert.equal(toestand(s, sec(95)).index, 2);
   assert.equal(toestand(s, sec(95)).restTotaalMs, 15000);
-  assert.equal(toestand(s, sec(110)).klaar, true);
-  assert.equal(toestand(s, sec(500)).klaar, true);
+  assert.equal(toestand(s, sec(110)).extra, true);
+  assert.equal(toestand(s, sec(500)).extra, true);
+  assert.equal(toestand(s, sec(500)).extraMs, 390_000);
 });
 
 test('vooraankondiging in de laatste 10 seconden, niet bij het laatste blok', () => {
@@ -47,7 +48,8 @@ test('overslaan springt naar het begin van het volgende blok', () => {
   assert.equal(t.restBlokMs, 30000);
   s = overslaan(s, sec(5));
   s = overslaan(s, sec(5));
-  assert.equal(toestand(s, sec(5)).klaar, true);
+  assert.equal(toestand(s, sec(5)).extra, true);
+  assert.equal(overslaan(s, sec(5)), s); // in de extra tijd valt niets meer over te slaan
 });
 
 test('afstand: snelheid maal tijd, per blok', async () => {
@@ -82,4 +84,18 @@ test('overgeslagen stuk telt niet mee voor de afstand; echte tijd loopt gewoon d
   assert.equal(t.index, 1);
   assert.equal(t.echtMs, 200_000);
   assert.ok(Math.abs(t.afstandKm - (9 / 3.6 * 200) / 1000) < 1e-9);
+});
+
+test('na het laatste blok loopt de training door: afstand groeit op de laatste snelheid', async () => {
+  const { pasSnelheidAan } = await import('../js/speler.js');
+  let s = start(maakSpeler([{ soort: 'rustig', kmh: 9, duurSec: 60 }, { soort: 'uitwandelen', kmh: 6, duurSec: 60 }]), T0);
+  const eind = toestand(s, sec(120)).afstandKm;
+  const t = toestand(s, sec(180));
+  assert.equal(t.extra, true);
+  assert.equal(t.index, 1);
+  assert.equal(t.aankondigen, false);
+  assert.ok(Math.abs(t.afstandKm - eind - 0.1) < 1e-9); // 1 min op 6 km/u
+  s = pasSnelheidAan(s, sec(180), 2);                     // weer gaan joggen op 8 km/u
+  assert.equal(toestand(s, sec(181)).kmh, 8);
+  assert.ok(Math.abs(toestand(s, sec(240)).afstandKm - toestand(s, sec(180)).afstandKm - 8 / 60) < 1e-9);
 });

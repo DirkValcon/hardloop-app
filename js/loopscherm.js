@@ -88,7 +88,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   let speler = maakSpeler(training.blokken);
   let timer = null;
   let stopSchermAan = null;
-  let vorige = { index: -1, aankondigen: false, klaar: false, km: 0, kmOpMs: 0 };
+  let vorige = { index: -1, aankondigen: false, extra: false, km: 0, kmOpMs: 0 };
 
   // Doorgaan na herladen: de lopende training staat in de opslag.
   try {
@@ -152,6 +152,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
           <button type="button" class="secundair" data-actie="pauze">Pauze</button>
           <button type="button" class="secundair" data-actie="overslaan">Volgend blok</button>
           <button type="button" class="secundair" data-actie="stop">Stop</button>
+          <button type="button" class="primair" data-actie="afronden" hidden>Training afronden</button>
         </div>
       </section>`;
   }
@@ -179,23 +180,22 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   function ververs() {
     const nu = Date.now();
     const t = toestand(speler, nu);
-    if (t.klaar) {
-      if (!vorige.klaar) geluid.piep(3, true);
-      vorige.klaar = true;
-      return tekenKlaar();
-    }
     const $ = (sel) => root.querySelector(`[data-test=${sel}]`);
     const b = t.blok;
-    $('bloktitel').textContent = blokTitel(b);
-    $('totaal').textContent = `nog ${klok(t.restTotaalMs)}`;
+    $('bloktitel').textContent = t.extra ? 'Extra: doorlopen' : blokTitel(b);
+    $('totaal').textContent = t.extra ? `schema klaar · ${klok(t.echtMs)}` : `nog ${klok(t.restTotaalMs)}`;
     $('snelheid').textContent = kmh(t.kmh);
     $('snelheid').closest('.snelheid-vak').classList.toggle('is-aangepast', t.kmh !== b.kmh);
     $('helling').textContent = helling(b.helling);
     $('tempo').textContent = `${formatTijd(tempoPerKm(t.kmh))} /km${b.afstandM ? ` · ${b.afstandM >= 1000 ? `${String(b.afstandM / 1000).replace('.', ',')} km` : `${b.afstandM} m`}` : ''}${t.kmh !== b.kmh ? ` · schema ${kmh(b.kmh)}` : ''}`;
     $('afstand').textContent = `${t.afstandKm.toFixed(2).replace('.', ',')} km`;
-    $('timer').textContent = klok(t.restBlokMs);
+    // In de extra tijd telt de klok op in plaats van af.
+    $('timer').textContent = t.extra ? `+${klok(t.extraMs)}` : klok(t.restBlokMs);
     const sectie = root.querySelector('.loop');
-    sectie.dataset.soort = b.soort;
+    sectie.dataset.soort = t.extra ? 'extra' : b.soort;
+    root.querySelector('[data-actie=overslaan]').hidden = t.extra;
+    root.querySelector('[data-actie=stop]').hidden = t.extra;
+    root.querySelector('[data-actie=afronden]').hidden = !t.extra;
     sectie.classList.toggle('is-gepauzeerd', t.gepauzeerd);
     root.querySelector('[data-actie=pauze]').textContent = t.gepauzeerd ? 'Hervat' : 'Pauze';
     root.querySelectorAll('.seg').forEach((el, i) => {
@@ -207,7 +207,9 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     volgendeEl.classList.toggle('is-aankondiging', t.aankondigen);
     volgendeEl.textContent = v
       ? `${t.aankondigen ? `Over ${Math.ceil(t.restBlokMs / 1000)} s` : 'Hierna'}: ${blokTitel(v)}, ${kmh(t.volgendeKmh)} km/u${v.helling !== b.helling ? `, ${helling(v.helling)}%` : ''}`
-      : 'Laatste blok';
+      : t.extra
+        ? 'Je schema zit erop. Loop door zolang je wilt en druk op Training afronden.'
+        : 'Laatste blok. Daarna loopt de training door tot je zelf afrondt.';
 
     // Na elke volle kilometer: de tijd van die kilometer (echte looptijd, zonder pauzes).
     const heleKm = Math.floor(t.afstandKm);
@@ -219,9 +221,12 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
       vorige.kmOpMs = t.echtMs;
     }
 
-    if (t.index !== vorige.index && vorige.index !== -1) { geluid.piep(2, true); geluid.zeg(`Nu: ${uitspraak(b, t.kmh)}`); }
+    if (t.extra && !vorige.extra) {
+      geluid.piep(3, true);
+      geluid.zeg('Je training zit erop. Loop gerust door, en druk op afronden als je klaar bent.');
+    } else if (t.index !== vorige.index && vorige.index !== -1) { geluid.piep(2, true); geluid.zeg(`Nu: ${uitspraak(b, t.kmh)}`); }
     else if (t.aankondigen && !vorige.aankondigen) { geluid.piep(1); geluid.zeg(`Over ${VOORAANKONDIGING_SEC} seconden: ${uitspraak(v, t.volgendeKmh)}`); }
-    vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, klaar: false };
+    vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, extra: t.extra };
   }
 
   function loop() {
@@ -229,7 +234,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     stopSchermAan = houdSchermAan();
     // Na herladen niet opnieuw alle kilometers en het huidige blok aankondigen.
     const t = toestand(speler, Date.now());
-    vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, km: Math.floor(t.afstandKm), kmOpMs: t.echtMs };
+    vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, extra: t.extra, km: Math.floor(t.afstandKm), kmOpMs: t.echtMs };
     ververs();
     timer = setInterval(ververs, 250);
   }
@@ -253,6 +258,10 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
       speler = pasSnelheidAan(speler, nu, actie === 'sneller' ? 0.1 : -0.1);
       bewaar();
       ververs();
+    }
+    if (actie === 'afronden') {
+      speler = pauzeer(speler, nu);
+      tekenKlaar();
     }
     if (actie === 'stop') {
       if (!confirm('Training stoppen?')) return;
