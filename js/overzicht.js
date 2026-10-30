@@ -18,7 +18,7 @@ function komendeWijzigingen(profiel, vandaag) {
     `<div class="melding" data-test="komend">Vanaf maandag ${korteDatum(h.vanaf)}${h.trainingsdagen ? `: trainingsdagen ${h.trainingsdagen.join(', ')}` : ''}.</div>`).join('');
 }
 
-function overzichtHtml(profiel, vandaag) {
+function overzichtHtml(profiel, vandaag, account = '') {
   const p = effectiefProfiel(profiel, vandaag);
   const extra = p.extraWeken > 0
     ? `${p.extraWeken} ${p.extraWeken === 1 ? 'week' : 'weken'} ${p.extraWekenKeuze === 'basis' ? 'basisweken ervoor' : 'later starten'}`
@@ -42,7 +42,8 @@ function overzichtHtml(profiel, vandaag) {
     ${haalbaarheidHtml(p.vijfKmSeconden, p.doelSeconden)}
     <h2>Je snelheden op de loopband</h2>
     <div class="kaart">${zonesHtml(p.vijfKmSeconden, p.doelSeconden, p.eigenSnelheden)}</div>
-    <p class="hint">Rustige snelheden komen uit je huidige 5 km-tijd, snelle uit je doeltijd. Eigen snelheden stel je in onder Wijzigen.</p>`;
+    <p class="hint">Rustige snelheden komen uit je huidige 5 km-tijd, snelle uit je doeltijd. Eigen snelheden stel je in onder Wijzigen.</p>
+    ${account}`;
 }
 
 function formulierHtml(invoer, profiel, vandaag, fouten = {}) {
@@ -94,10 +95,11 @@ function formulierHtml(invoer, profiel, vandaag, fouten = {}) {
     </form>`;
 }
 
-export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = localStorage, gewijzigd } = {}) {
-  root.innerHTML = overzichtHtml(profiel, vandaag);
+export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = localStorage, gewijzigd, account, uitloggen } = {}) {
+  root.innerHTML = overzichtHtml(profiel, vandaag, account);
   root.onclick = (e) => {
     if (e.target.closest('[data-actie=wijzig]')) toonFormulier();
+    if (e.target.closest('[data-actie=uitloggen]')) uitloggen?.();
   };
 
   function toonFormulier(invoer, fouten) {
@@ -121,7 +123,7 @@ export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = 
       };
     };
     form.querySelector('#doelDatum').addEventListener('change', () => toonFormulier(lees()));
-    form.querySelector('[data-actie=annuleer]').addEventListener('click', () => toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd }));
+    form.querySelector('[data-actie=annuleer]').addEventListener('click', () => toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd, account, uitloggen }));
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const nieuw = lees();
@@ -130,7 +132,7 @@ export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = 
       profiel = wijzigProfiel(profiel, nieuw, vandaag);
       bewaarProfiel(opslag, profiel);
       gewijzigd?.(profiel);
-      toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd });
+      toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd, account, uitloggen });
     });
   }
 }

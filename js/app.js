@@ -9,8 +9,10 @@ import { huidigPlan } from './plan.js';
 import { vandaagIso } from './datum.js';
 import { afrondFormulier, koppelAfronden } from './afronden.js';
 import { kcalTraining } from './calorieen.js';
+import { huidigeGebruiker, toonInloggen, accountHtml, uitloggen } from './account.js';
 
 const root = document.getElementById('app');
+let gebruiker = null;
 
 const TABS = [
   { id: 'vandaag', naam: 'Vandaag', toon: toonVandaag,
@@ -19,7 +21,8 @@ const TABS = [
     icoon: '<path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>' },
   { id: 'voortgang', naam: 'Voortgang', toon: toonVoortgang,
     icoon: '<path d="M5 20V12M12 20V5M19 20v-9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>' },
-  { id: 'profiel', naam: 'Profiel', toon: toonOverzicht,
+  { id: 'profiel', naam: 'Profiel',
+    toon: (r, p) => toonOverzicht(r, p, { account: accountHtml(gebruiker), uitloggen: () => uitloggen().then(start) }),
     icoon: '<circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>' },
 ];
 
@@ -65,7 +68,9 @@ function toonTab(profiel) {
     <svg viewBox="0 0 24 24" aria-hidden="true">${t.icoon}</svg>${t.naam}</a>`).join('');
 }
 
-export function start() {
+export async function start() {
+  gebruiker = await huidigeGebruiker();
+  if (!gebruiker) return toonInloggen(root);
   const profiel = laadProfiel(localStorage);
   if (!profiel) {
     toonOnboarding(root, () => { location.hash = '#vandaag'; start(); });
@@ -74,7 +79,7 @@ export function start() {
   toonTab(profiel);
 }
 
-window.addEventListener('hashchange', () => { if (laadProfiel(localStorage)) start(); });
+window.addEventListener('hashchange', () => { if (gebruiker && laadProfiel(localStorage)) start(); });
 start();
 
 if ('serviceWorker' in navigator && location.hostname !== '127.0.0.1') {
