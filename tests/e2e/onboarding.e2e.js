@@ -67,7 +67,9 @@ try {
   await shot('5-gewicht');
   await volgende();
 
-  // Samenvatting, ook na herladen.
+  // Na de onboarding verschijnt het schema; het profiel staat onder de tab Profiel, ook na herladen.
+  await page.waitForSelector('h1:text("Schema")');
+  await page.getByRole('link', { name: 'Profiel' }).click();
   const controleer = async () => {
     const tekst = await page.textContent('[data-test=samenvatting]');
     for (const verwacht of ['35:00', '10 km in 1:10:00', '5 maart 2027', '7 weken basisweken ervoor', 'di, do, zo', '80 kg', '1%']) {

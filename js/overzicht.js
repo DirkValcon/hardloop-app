@@ -8,8 +8,8 @@ export function toonOverzicht(root, p) {
     ? `${p.extraWeken} ${p.extraWeken === 1 ? 'week' : 'weken'} ${p.extraWekenKeuze === 'basis' ? 'basisweken ervoor' : 'later starten'}`
     : 'geen';
   root.innerHTML = `
-    <h1>Je profiel staat klaar</h1>
-    <p class="uitleg">Hiermee maakt de app straks je schema.</p>
+    <h1>Profiel</h1>
+    
     <div class="kaart">
       <dl class="samenvatting" data-test="samenvatting">
         <dt>5 km-tijd</dt><dd>${formatTijd(p.vijfKmSeconden)}</dd>

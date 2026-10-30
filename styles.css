@@ -82,3 +82,33 @@ table.zones th { font-weight: 600; }
 table.zones td { text-align: right; white-space: nowrap; }
 table.zones small { display: block; color: var(--zacht); font-weight: 400; font-size: 13px; }
 table.zones .kmh { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.week h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.week h2 small { width: 100%; color: var(--zacht); font-size: 14px; font-weight: 400; }
+.badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--lijn); color: var(--tekst); text-transform: uppercase; letter-spacing: .03em; }
+.badge-herstel { background: #2f9e4433; color: #2f9e44; }
+.badge-taper { background: #ff7a3333; color: var(--accent); }
+.trainingen { padding: 0; }
+.training { border-top: 1px solid var(--lijn); }
+.training:first-child { border-top: 0; }
+.training summary { display: flex; gap: 14px; padding: 14px 16px; cursor: pointer; list-style: none; }
+.training summary::-webkit-details-marker { display: none; }
+.training .dag { width: 44px; flex: none; font-weight: 700; }
+.training .dag small, .training .wat small { display: block; color: var(--zacht); font-weight: 400; font-size: 13px; }
+.training .wat { flex: 1; font-weight: 600; }
+.training.is-vandaag summary { box-shadow: inset 3px 0 0 var(--accent); }
+.label { display: block; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--zacht); }
+.label-kwaliteit, .label-doel { color: var(--accent); }
+.blokken { list-style: none; margin: 0; padding: 0 16px 12px 74px; }
+.blok { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px dashed var(--lijn); font-size: 15px; }
+.blok small { display: block; color: var(--zacht); font-size: 13px; }
+.blok-waarden { text-align: right; white-space: nowrap; }
+.blok-waarden strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.blok-interval strong, .blok-tempo strong { color: var(--accent); }
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center;
+  background: var(--kaart); border-top: 1px solid var(--lijn); padding: 6px 16px calc(6px + env(safe-area-inset-bottom));
+}
+nav.tabs a { flex: 1; max-width: 160px; text-align: center; padding: 8px 0; color: var(--zacht); text-decoration: none; font-size: 13px; font-weight: 600; }
+nav.tabs a[aria-current=page] { color: var(--accent); }
+nav.tabs svg { display: block; margin: 0 auto 2px; width: 24px; height: 24px; }
+body.met-tabs main { padding-bottom: 100px; }

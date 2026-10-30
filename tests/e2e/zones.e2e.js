@@ -6,7 +6,7 @@ import { opzet, DIRK } from './helpers.js';
 {
   const { page, url, fouten, shot, sluit } = await opzet({ profiel: DIRK });
   try {
-    await page.goto(url);
+    await page.goto(url + '#profiel');
     const melding = page.locator('[data-test=haalbaarheid]');
     assert.equal(await melding.getAttribute('data-niveau'), 'ambitieus');
     assert.match(await melding.textContent(), /4% sneller dan je voorspelde 1:12:58/);
