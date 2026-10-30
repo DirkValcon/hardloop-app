@@ -1,6 +1,7 @@
 // Scherm Vandaag: de training van vandaag (of de eerstvolgende) met duur, afstand en calorieën.
 import { volgendeTraining } from './schema.js';
 import { huidigPlan } from './plan.js';
+import { effectiefProfiel } from './instellingen.js';
 import { laadResultaten, markeerOvergeslagen } from './resultaten.js';
 import { laadAanpassingen, bewaarAanpassingen, verplaats } from './aanpassingen.js';
 import { plusDagen } from './datum.js';
@@ -103,7 +104,7 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
       <ol class="fases">${fases(t).map((f) => `
         <li><span>${f.naam}<small>${minuten(f.duur)}</small></span><span class="blok-waarden"><strong>${f.snelheid}</strong> km/u</span></li>`).join('')}
       </ol>
-      <p class="hint">Helling ${String(profiel.helling).replace('.', ',')}% · uitwandelen op 0%</p>
+      <p class="hint">Helling ${String(effectiefProfiel(profiel, vandaag).helling).replace('.', ',')}% · uitwandelen op 0%</p>
       <a class="knop primair breed${isVandaag ? '' : ' is-uit'}" ${isVandaag ? `href="#loop/${t.id}"` : 'aria-disabled="true"'} role="button" data-actie="start">Start op loopband</a>
       ${isVandaag ? `<div class="knoppen klein-knoppen">
         <a class="knop secundair" href="#afvinken/${t.id}">Afvinken zonder app</a>

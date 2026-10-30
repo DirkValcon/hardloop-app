@@ -76,3 +76,7 @@ export function start() {
 
 window.addEventListener('hashchange', () => { if (laadProfiel(localStorage)) start(); });
 start();
+
+if ('serviceWorker' in navigator && location.hostname !== '127.0.0.1') {
+  navigator.serviceWorker.register('sw.js').catch(() => { /* offline werken is een extraatje */ });
+}

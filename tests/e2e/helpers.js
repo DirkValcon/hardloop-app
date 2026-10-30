@@ -19,7 +19,10 @@ export async function opzet({ vandaag = '2026-10-30', profiel = null, klokLoopt 
   if (klokLoopt) await page.clock.install({ time: new Date(`${vandaag}T12:00:00`) });
   else await page.clock.setFixedTime(new Date(`${vandaag}T12:00:00`));
   if (profiel) {
-    await page.addInitScript((p) => localStorage.setItem('hardloop-app.profiel.v1', JSON.stringify(p)), profiel);
+    // Alleen bij de eerste keer laden, zodat wijzigingen een herlaadbeurt overleven.
+    await page.addInitScript((p) => {
+      if (!localStorage.getItem('hardloop-app.profiel.v1')) localStorage.setItem('hardloop-app.profiel.v1', JSON.stringify(p));
+    }, profiel);
   }
   const fouten = [];
   page.on('pageerror', (e) => fouten.push(e.message));

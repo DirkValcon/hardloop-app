@@ -1,6 +1,7 @@
 // Scherm Voortgang: kerncijfers en een staafgrafiek met kilometers per week (gelopen tegen gepland).
 import { berekenVoortgang } from './voortgang.js';
 import { huidigPlan } from './plan.js';
+import { effectiefProfiel } from './instellingen.js';
 import { laadResultaten } from './resultaten.js';
 import { vandaagIso, datumTekst } from './datum.js';
 import { formatTijd } from './tijd.js';
@@ -8,7 +9,7 @@ import { km, korteDatum } from './opmaak.js';
 
 export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = localStorage } = {}) {
   const plan = huidigPlan(profiel, vandaag, opslag);
-  const v = berekenVoortgang(plan, laadResultaten(opslag), profiel, vandaag);
+  const v = berekenVoortgang(plan, laadResultaten(opslag), effectiefProfiel(profiel, vandaag), vandaag);
   const max = Math.max(...v.perWeek.map((w) => Math.max(w.km, w.geplandKm)), 1);
   const staven = v.perWeek.map((w, i) => {
     const toekomst = w.maandag > vandaag;

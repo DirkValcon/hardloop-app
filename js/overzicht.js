@@ -1,15 +1,27 @@
-// Tijdelijk startscherm na de onboarding; wordt in story 4 het scherm Vandaag.
+// Scherm Profiel: je gegevens, je snelheden en het formulier om ze te wijzigen.
 import { formatTijd } from './tijd.js';
-import { datumTekst } from './datum.js';
+import { datumTekst, vandaagIso, plusDagen } from './datum.js';
 import { haalbaarheidHtml, zonesHtml } from './zonesweergave.js';
+import { DAGEN, bewaarProfiel, extraWeken, vroegsteDoeldatum } from './profiel.js';
+import { effectiefProfiel, valideerWijziging, wijzigProfiel } from './instellingen.js';
+import { maandagVan } from './schema.js';
+import { korteDatum } from './opmaak.js';
 
-export function toonOverzicht(root, p) {
+const DAGNAMEN = { ma: 'maandag', di: 'dinsdag', wo: 'woensdag', do: 'donderdag', vr: 'vrijdag', za: 'zaterdag', zo: 'zondag' };
+
+function komendeWijzigingen(profiel, vandaag) {
+  const nu = maandagVan(vandaag);
+  return (profiel.historie ?? []).filter((h) => h.vanaf > nu).map((h) =>
+    `<div class="melding" data-test="komend">Vanaf maandag ${korteDatum(h.vanaf)}${h.trainingsdagen ? `: trainingsdagen ${h.trainingsdagen.join(', ')}` : ''}.</div>`).join('');
+}
+
+function overzichtHtml(profiel, vandaag) {
+  const p = effectiefProfiel(profiel, vandaag);
   const extra = p.extraWeken > 0
     ? `${p.extraWeken} ${p.extraWeken === 1 ? 'week' : 'weken'} ${p.extraWekenKeuze === 'basis' ? 'basisweken ervoor' : 'later starten'}`
     : 'geen';
-  root.innerHTML = `
+  return `
     <h1>Profiel</h1>
-    
     <div class="kaart">
       <dl class="samenvatting" data-test="samenvatting">
         <dt>5 km-tijd</dt><dd>${formatTijd(p.vijfKmSeconden)}</dd>
@@ -20,10 +32,90 @@ export function toonOverzicht(root, p) {
         <dt>Gewicht</dt><dd>${p.gewicht} kg</dd>
         <dt>Helling</dt><dd>${p.helling}%</dd>
       </dl>
+      <button type="button" class="secundair breed" data-actie="wijzig">Wijzigen</button>
     </div>
+    ${komendeWijzigingen(profiel, vandaag)}
     <h2>Je doel</h2>
     ${haalbaarheidHtml(p.vijfKmSeconden, p.doelSeconden)}
     <h2>Je snelheden op de loopband</h2>
     <div class="kaart">${zonesHtml(p.vijfKmSeconden, p.doelSeconden)}</div>
     <p class="hint">Rustige snelheden komen uit je huidige 5 km-tijd, snelle uit je doeltijd.</p>`;
+}
+
+function formulierHtml(invoer, profiel, vandaag, fouten = {}) {
+  const fout = (v) => (fouten[v] ? `<div class="foutmelding" role="alert">${fouten[v]}</div>` : '');
+  const ongeldig = (v) => (fouten[v] ? 'aria-invalid="true"' : '');
+  const datumGewijzigd = invoer.doelDatum !== profiel.doelDatum;
+  const extra = datumGewijzigd && !valideerWijziging(profiel, { ...invoer, extraWekenKeuze: 'later' }, vandaag).doelDatum
+    ? extraWeken(vandaag, invoer.doelDatum) : 0;
+  return `
+    <h1>Profiel wijzigen</h1>
+    <form novalidate data-test="instellingen">
+      <div class="veld"><label class="titel" for="vijfKmTijd">5 km-tijd (mm:ss)</label>
+        <input type="text" inputmode="numeric" id="vijfKmTijd" name="vijfKmTijd" value="${invoer.vijfKmTijd}" ${ongeldig('vijfKmTijd')}>${fout('vijfKmTijd')}</div>
+      <div class="veld"><label class="titel" for="doelTijd">Doeltijd 10 km (optioneel)</label>
+        <input type="text" inputmode="numeric" id="doelTijd" name="doelTijd" value="${invoer.doelTijd}" ${ongeldig('doelTijd')}>${fout('doelTijd')}</div>
+      <div class="veld"><label class="titel" for="doelDatum">Doeldatum</label>
+        <input type="date" id="doelDatum" name="doelDatum" value="${invoer.doelDatum}" min="${vroegsteDoeldatum(vandaag)}" ${ongeldig('doelDatum')}>
+        <div class="hint">Een andere doeldatum verschuift het hele schema.</div>${fout('doelDatum')}</div>
+      ${extra > 0 ? `<fieldset class="veld keuzes" style="border:0;padding:0;margin:0 0 18px">
+        <legend class="titel" style="margin-bottom:8px">Je hebt ${extra} ${extra === 1 ? 'week' : 'weken'} extra. Wat wil je daarmee?</legend>
+        <label class="keuze"><input type="radio" name="extraWekenKeuze" value="later" ${invoer.extraWekenKeuze === 'later' ? 'checked' : ''}><span>Later starten</span></label>
+        <label class="keuze"><input type="radio" name="extraWekenKeuze" value="basis" ${invoer.extraWekenKeuze === 'basis' ? 'checked' : ''}><span>Basisweken ervoor</span></label>
+        ${fout('extraWekenKeuze')}</fieldset>` : ''}
+      <div class="veld"><span class="titel">Trainingsdagen</span>
+        <div class="dagen" role="group" aria-label="Trainingsdagen">${DAGEN.map((d) => `
+          <label class="dag"><input type="checkbox" name="trainingsdagen" value="${d}" aria-label="${DAGNAMEN[d]}"
+            ${invoer.trainingsdagen.includes(d) ? 'checked' : ''}><span>${d}</span></label>`).join('')}</div>
+        <div class="hint">Nieuwe dagen gelden vanaf maandag ${korteDatum(plusDagen(maandagVan(vandaag), 7))}; deze week verschuif je onder Schema.</div>
+        ${fout('trainingsdagen')}</div>
+      <div class="veld"><label class="titel" for="gewicht">Gewicht (kg)</label>
+        <input type="number" inputmode="decimal" id="gewicht" name="gewicht" step="0.1" value="${invoer.gewicht}" ${ongeldig('gewicht')}>${fout('gewicht')}</div>
+      <div class="veld"><label class="titel" for="helling">Standaardhelling (%)</label>
+        <input type="number" inputmode="decimal" id="helling" name="helling" step="0.5" value="${invoer.helling}" ${ongeldig('helling')}>${fout('helling')}</div>
+      <p class="hint">Snelheden en helling gelden vanaf deze week. Trainingen die je al gedaan hebt blijven staan.</p>
+      <div class="knoppen">
+        <button type="button" class="secundair" data-actie="annuleer">Annuleren</button>
+        <button type="submit" class="primair">Opslaan</button>
+      </div>
+    </form>`;
+}
+
+export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = localStorage, gewijzigd } = {}) {
+  root.innerHTML = overzichtHtml(profiel, vandaag);
+  root.onclick = (e) => {
+    if (e.target.closest('[data-actie=wijzig]')) toonFormulier();
+  };
+
+  function toonFormulier(invoer, fouten) {
+    const p = effectiefProfiel(profiel, vandaag);
+    const volgende = (profiel.historie ?? []).filter((h) => h.vanaf > maandagVan(vandaag) && h.trainingsdagen).at(-1);
+    invoer ??= {
+      vijfKmTijd: formatTijd(p.vijfKmSeconden), doelTijd: p.doelSeconden ? formatTijd(p.doelSeconden) : '',
+      doelDatum: profiel.doelDatum, extraWekenKeuze: profiel.extraWekenKeuze,
+      trainingsdagen: volgende?.trainingsdagen ?? p.trainingsdagen, gewicht: String(profiel.gewicht), helling: String(p.helling),
+    };
+    root.innerHTML = formulierHtml(invoer, profiel, vandaag, fouten);
+    const form = root.querySelector('form');
+    const lees = () => {
+      const d = new FormData(form);
+      return {
+        vijfKmTijd: d.get('vijfKmTijd').trim(), doelTijd: d.get('doelTijd').trim(), doelDatum: d.get('doelDatum'),
+        extraWekenKeuze: d.get('extraWekenKeuze') ?? invoer.extraWekenKeuze, trainingsdagen: d.getAll('trainingsdagen'),
+        gewicht: d.get('gewicht'), helling: d.get('helling'),
+      };
+    };
+    form.querySelector('#doelDatum').addEventListener('change', () => toonFormulier(lees()));
+    form.querySelector('[data-actie=annuleer]').addEventListener('click', () => toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd }));
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nieuw = lees();
+      const f = valideerWijziging(profiel, nieuw, vandaag);
+      if (Object.keys(f).length) return toonFormulier(nieuw, f);
+      profiel = wijzigProfiel(profiel, nieuw, vandaag);
+      bewaarProfiel(opslag, profiel);
+      gewijzigd?.(profiel);
+      toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd });
+    });
+  }
 }

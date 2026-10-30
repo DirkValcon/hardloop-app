@@ -20,7 +20,7 @@ export function startServer(port = 0) {
       res.writeHead(404).end('niet gevonden');
     }
   });
-  return new Promise((ok) => server.listen(port, '127.0.0.1', () => ok(server)));
+  return new Promise((ok) => server.listen(port, 'localhost', () => ok(server)));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -4,6 +4,14 @@ Eigen hardloop-app voor de iPhone (web-app op het beginscherm): van 5 naar 10 km
 
 Geen build-stap: gewone HTML, CSS en JavaScript-modules. Gegevens blijven op je telefoon (localStorage).
 
+## Op je iPhone zetten
+
+1. Zet GitHub Pages aan: Settings → Pages → Source "Deploy from a branch", branch `main`, map `/ (root)`.
+2. Open `https://<gebruikersnaam>.github.io/hardloop-app/` in Safari op je iPhone.
+3. Tik op Deel → "Zet op beginscherm". De app opent dan schermvullend en werkt ook zonder internet.
+
+Je gegevens staan alleen op je telefoon. Verwijder je de app van het beginscherm, dan zijn ze weg.
+
 ## Testen
 
 ```
@@ -23,4 +31,4 @@ npm run serve     # lokaal bekijken op http://127.0.0.1:8080/
 | 6 | Trainingsscherm loopband | klaar |
 | 7 | Training afvinken + calorieën | klaar |
 | 8 | Voortgang | klaar |
-| 9 | Instellingen wijzigen | |
+| 9 | Instellingen wijzigen | klaar |

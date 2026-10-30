@@ -125,11 +125,26 @@ export function maandagVan(iso) {
 
 // ---------- Plan ----------
 
+// Het profiel dat geldt voor de week die op `maandag` begint: het basisprofiel plus alle
+// wijzigingen uit de instellingen die op of vóór die week ingingen.
+export function profielVoorWeek(profiel, maandag) {
+  return (profiel.historie ?? [])
+    .filter((h) => h.vanaf <= maandag)
+    .reduce((p, { vanaf, ...velden }) => ({ ...p, ...velden }), profiel);
+}
+
 export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagIso() } = {}) {
-  const zones = berekenZones(profiel.vijfKmSeconden, profiel.doelSeconden);
-  const b = maakBouwer(zones, profiel.helling);
-  const indeling = verdeelDagen(profiel.trainingsdagen);
-  const dagen = Object.keys(indeling);
+  const cache = new Map();
+  const opWeek = (maandag) => {
+    const p = profielVoorWeek(profiel, maandag);
+    const sleutel = JSON.stringify([p.vijfKmSeconden, p.doelSeconden, p.helling, p.trainingsdagen]);
+    if (!cache.has(sleutel)) {
+      const zones = berekenZones(p.vijfKmSeconden, p.doelSeconden);
+      const indeling = verdeelDagen(p.trainingsdagen);
+      cache.set(sleutel, { p, zones, b: maakBouwer(zones, p.helling), indeling, dagen: Object.keys(indeling) });
+    }
+    return cache.get(sleutel);
+  };
 
   const laatsteMaandag = maandagVan(profiel.doelDatum);
   const eersteMaandag = plusDagen(laatsteMaandag, -(sjabloon.weken - 1) * 7);
@@ -137,11 +152,14 @@ export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagI
 
   // Basisweken vóór het schema, als daarvoor gekozen is.
   if (profiel.extraWekenKeuze === 'basis') {
-    const vandaagMaandag = maandagVan(vandaag);
-    const startMaandag = vandaag === vandaagMaandag ? vandaag : plusDagen(vandaagMaandag, 7);
+    // Vast punt: de dag waarop het profiel is gemaakt, zodat de basisweken niet verschuiven als de tijd verstrijkt.
+    const begin = profiel.aangemaaktOp ?? vandaag;
+    const beginMaandag = maandagVan(begin);
+    const startMaandag = begin === beginMaandag ? begin : plusDagen(beginMaandag, 7);
     const aantal = Math.max(0, Math.round((naarDatum(eersteMaandag) - naarDatum(startMaandag)) / (7 * 86400000)));
     for (let i = 0; i < aantal; i++) {
       const maandag = plusDagen(startMaandag, i * 7);
+      const { b, indeling, dagen } = opWeek(maandag);
       let versnellingGehad = false;
       const trainingen = dagen.map((dag) => {
         const datum = plusDagen(maandag, dagIndex(dag));
@@ -165,6 +183,7 @@ export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagI
 
   for (let w = 1; w <= sjabloon.weken; w++) {
     const maandag = plusDagen(eersteMaandag, (w - 1) * 7);
+    const { p, b, indeling, dagen } = opWeek(maandag);
     const i = w - 1;
     let extraNr = 0;
     let trainingen = dagen.map((dag) => {
@@ -184,14 +203,14 @@ export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagI
         : { id: `w${w}-extra${extraNr - 1}`, datum, dag, extra: true, ...rustigeLoop(sjabloon.extraRustig[i], b) };
     });
 
-    if (w === sjabloon.weken) trainingen = laatsteWeek(trainingen, profiel, b);
+    if (w === sjabloon.weken) trainingen = laatsteWeek(trainingen, p, b);
     weken.push({
       nummer: w, soort: sjabloon.herstelweken.includes(w) ? 'herstel' : w === sjabloon.weken ? 'taper' : 'opbouw',
       label: `Week ${w}`, maandag, trainingen,
     });
   }
 
-  return { sjabloon: sjabloon.id, zones, weken, start: weken[0].maandag, doelDatum: profiel.doelDatum };
+  return { sjabloon: sjabloon.id, zones: opWeek(maandagVan(vandaag)).zones, weken, start: weken[0].maandag, doelDatum: profiel.doelDatum };
 }
 
 // Week 11: de 10 km valt op de doeldatum. Trainingen na de doeldatum vervallen; past het niet,
