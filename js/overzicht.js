@@ -1,6 +1,7 @@
 // Tijdelijk startscherm na de onboarding; wordt in story 4 het scherm Vandaag.
 import { formatTijd } from './tijd.js';
 import { datumTekst } from './datum.js';
+import { haalbaarheidHtml, zonesHtml } from './zonesweergave.js';
 
 export function toonOverzicht(root, p) {
   const extra = p.extraWeken > 0
@@ -19,5 +20,10 @@ export function toonOverzicht(root, p) {
         <dt>Gewicht</dt><dd>${p.gewicht} kg</dd>
         <dt>Helling</dt><dd>${p.helling}%</dd>
       </dl>
-    </div>`;
+    </div>
+    <h2>Je doel</h2>
+    ${haalbaarheidHtml(p.vijfKmSeconden, p.doelSeconden)}
+    <h2>Je snelheden op de loopband</h2>
+    <div class="kaart">${zonesHtml(p.vijfKmSeconden, p.doelSeconden)}</div>
+    <p class="hint">Rustige snelheden komen uit je huidige 5 km-tijd, snelle uit je doeltijd.</p>`;
 }

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/*.test.js && node tests/e2e/onboarding.e2e.js",
+    "test": "node --test tests/*.test.js && for f in tests/e2e/*.e2e.js; do node $f || exit 1; done",
     "serve": "node tests/server.js"
   }
 }

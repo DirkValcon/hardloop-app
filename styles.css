@@ -69,3 +69,16 @@ button.secundair { background: var(--kaart); color: var(--tekst); border: 1px so
 dl.samenvatting { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0; }
 dl.samenvatting dt { color: var(--zacht); }
 dl.samenvatting dd { margin: 0; font-weight: 600; }
+.melding { border-radius: 12px; padding: 12px 14px; margin-top: 10px; font-size: 15px; border: 1px solid var(--lijn); background: var(--kaart); }
+.melding-ambitieus { border-color: #f08c00; }
+.melding-te-snel { border-color: var(--fout); }
+.melding-haalbaar, .melding-geen { border-color: #2f9e44; }
+.melding button { margin-top: 8px; padding: 8px 12px; font-size: 15px; }
+h2 { font-size: 20px; margin: 24px 0 10px; }
+table.zones { width: 100%; border-collapse: collapse; }
+table.zones th, table.zones td { text-align: left; padding: 10px 0; border-top: 1px solid var(--lijn); vertical-align: top; }
+table.zones tr:first-child th, table.zones tr:first-child td { border-top: 0; }
+table.zones th { font-weight: 600; }
+table.zones td { text-align: right; white-space: nowrap; }
+table.zones small { display: block; color: var(--zacht); font-weight: 400; font-size: 13px; }
+table.zones .kmh { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }

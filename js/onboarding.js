@@ -4,6 +4,8 @@ import {
 } from './profiel.js';
 import { vandaagIso, datumTekst, plusDagen } from './datum.js';
 import { parseTijd, formatTijd } from './tijd.js';
+import { haalbaarheidHtml } from './zonesweergave.js';
+import { beoordeelDoeltijd } from './zones.js';
 
 const DAGNAMEN = { ma: 'maandag', di: 'dinsdag', wo: 'woensdag', do: 'donderdag', vr: 'vrijdag', za: 'zaterdag', zo: 'zondag' };
 
@@ -40,6 +42,7 @@ export function toonOnboarding(root, klaar, { opslag = localStorage, vandaag = v
           autocomplete="off" value="${invoer.doelTijd ?? ''}" ${ongeldig('doelTijd')}>
         <div class="hint">Leeg laten mag: dan stelt de app een haalbare tijd voor.</div>
         ${fout('doelTijd')}
+        <div data-test="doel-feedback">${doelFeedback()}</div>
       </div>`,
     () => {
       const extra = invoer.doelDatum && !valideerStap(2, { ...invoer, extraWekenKeuze: 'later' }, vandaag).doelDatum
@@ -95,6 +98,14 @@ export function toonOnboarding(root, klaar, { opslag = localStorage, vandaag = v
       </div>`,
   ];
 
+  function doelFeedback() {
+    const doel = invoer.doelTijd ? parseTijd(invoer.doelTijd) : null;
+    if (invoer.doelTijd && (doel === null || valideerStap(1, invoer, vandaag).doelTijd)) return '';
+    const vijf = parseTijd(invoer.vijfKmTijd);
+    const voorstel = doel ? '' : `<button type="button" class="secundair" data-actie="voorstel">Gebruik ${formatTijd(beoordeelDoeltijd(vijf, null).voorstel)}</button>`;
+    return haalbaarheidHtml(vijf, doel).replace('</div>', `${voorstel}</div>`);
+  }
+
   function leesFormulier(form) {
     const data = new FormData(form);
     if (data.has('vijfKmTijd')) invoer.vijfKmTijd = data.get('vijfKmTijd').trim();
@@ -140,6 +151,17 @@ export function toonOnboarding(root, klaar, { opslag = localStorage, vandaag = v
       stap -= 1;
       teken();
     });
+    // Doeltijd: direct laten zien of hij haalbaar is.
+    const doelVeld = form.querySelector('#doelTijd');
+    const toonDoelFeedback = () => {
+      invoer.doelTijd = doelVeld.value.trim();
+      form.querySelector('[data-test=doel-feedback]').innerHTML = doelFeedback();
+      form.querySelector('[data-actie=voorstel]')?.addEventListener('click', () => {
+        doelVeld.value = formatTijd(beoordeelDoeltijd(parseTijd(invoer.vijfKmTijd), null).voorstel);
+        toonDoelFeedback();
+      });
+    };
+    if (doelVeld) { doelVeld.addEventListener('input', toonDoelFeedback); toonDoelFeedback(); }
     // Zodra je iets aanpast verdwijnt de oude foutmelding.
     form.addEventListener('input', (e) => {
       const veld = e.target.name;

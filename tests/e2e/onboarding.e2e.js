@@ -1,27 +1,11 @@
 // Browsertest story 1: onboarding op een iPhone-formaat scherm.
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
-import { startServer } from '../server.js';
+import { opzet } from './helpers.js';
 
-// Playwright is globaal geïnstalleerd; via require vinden we hem ook buiten node_modules.
-const { chromium, devices } = createRequire(import.meta.url)('playwright');
-
-const SCREENSHOTS = process.env.SCREENSHOTS ?? 'tests/e2e/screenshots';
-await mkdir(SCREENSHOTS, { recursive: true });
-
-const server = await startServer();
-const url = `http://127.0.0.1:${server.address().port}/`;
-const browser = await chromium.launch();
-const context = await browser.newContext({ ...devices['iPhone 13'], colorScheme: 'dark' });
-const page = await context.newPage();
-await page.clock.setFixedTime(new Date('2026-10-30T12:00:00'));
-const fouten = [];
-page.on('pageerror', (e) => fouten.push(e.message));
-
+const { page, url, fouten, shot, sluit } = await opzet();
 const volgende = () => page.getByRole('button', { name: /Volgende|Klaar/ }).click();
 const foutmelding = () => page.locator('.foutmelding').first().textContent();
-const shot = (naam) => page.screenshot({ path: `${SCREENSHOTS}/${naam}.png` });
 
 try {
   await page.goto(url);
@@ -98,6 +82,5 @@ try {
   assert.deepEqual(fouten, [], 'JavaScript-fouten op de pagina');
   console.log('✓ story 1 onboarding: alle browserchecks geslaagd');
 } finally {
-  await browser.close();
-  server.close();
+  await sluit();
 }
