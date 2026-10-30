@@ -6,6 +6,8 @@ import { toonVandaag } from './vandaag.js';
 import { toonLoopscherm } from './loopscherm.js';
 import { huidigPlan } from './plan.js';
 import { vandaagIso } from './datum.js';
+import { afrondFormulier, koppelAfronden } from './afronden.js';
+import { kcalTraining } from './calorieen.js';
 
 const root = document.getElementById('app');
 
@@ -24,14 +26,28 @@ function toonLoop(profiel, trainingId) {
   document.body.classList.remove('met-tabs');
   document.querySelector('nav.tabs')?.remove();
   toonLoopscherm(root, training, {
+    profiel,
     terug: () => { location.hash = '#vandaag'; },
     klaar: () => { location.hash = '#vandaag'; },
   });
 }
 
+function toonAfvinken(profiel, trainingId) {
+  const training = huidigPlan(profiel, vandaagIso()).weken.flatMap((w) => w.trainingen).find((t) => t.id === trainingId);
+  if (!training) { location.hash = '#vandaag'; return; }
+  document.body.classList.remove('met-tabs');
+  document.querySelector('nav.tabs')?.remove();
+  root.onclick = null;
+  root.innerHTML = `<h1>Afvinken</h1><p class="uitleg">${training.naam}</p>
+    ${afrondFormulier({ afstandKm: training.afstandKm, duurSec: training.duurSec, kcal: kcalTraining(training, profiel.gewicht) })}`;
+  const terug = () => history.length > 1 ? history.back() : (location.hash = '#vandaag');
+  koppelAfronden(root, training, profiel, { opgeslagen: terug, annuleer: terug });
+}
+
 function toonTab(profiel) {
   const id = location.hash.slice(1);
   if (id.startsWith('loop/')) return toonLoop(profiel, id.slice(5));
+  if (id.startsWith('afvinken/')) return toonAfvinken(profiel, id.slice(9));
   root.onclick = null;
   const tab = TABS.find((t) => t.id === id) ?? TABS[0];
   document.body.classList.add('met-tabs');

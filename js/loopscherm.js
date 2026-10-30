@@ -1,9 +1,11 @@
 // Trainingsscherm voor op de loopband: groot de snelheid en helling, aftellende timer,
 // een balk met alle blokken en een aankondiging 10 seconden voor het volgende blok.
-import { maakSpeler, start, pauzeer, hervat, overslaan, toestand, VOORAANKONDIGING_SEC } from './speler.js';
+import { maakSpeler, start, pauzeer, hervat, overslaan, toestand, verstreken, VOORAANKONDIGING_SEC } from './speler.js';
 import { kmh, minuten } from './opmaak.js';
 import { formatTijd } from './tijd.js';
 import { tempoPerKm } from './zones.js';
+import { kcalTotVerstreken, afstandTotVerstreken } from './calorieen.js';
+import { afrondFormulier, koppelAfronden } from './afronden.js';
 
 export const OPSLAG_LOPEND = 'hardloop-app.lopend.v1';
 
@@ -70,7 +72,7 @@ const uitspraak = (b) => `${blokTitel(b)}, ${kmh(b.kmh).replace(',', ' komma ')}
 
 // ---------- Scherm ----------
 
-export function toonLoopscherm(root, training, { opslag = localStorage, terug, klaar } = {}) {
+export function toonLoopscherm(root, training, { opslag = localStorage, profiel, terug, klaar } = {}) {
   const geluid = maakGeluid();
   let speler = maakSpeler(training.blokken);
   let timer = null;
@@ -134,15 +136,22 @@ export function toonLoopscherm(root, training, { opslag = localStorage, terug, k
       </section>`;
   }
 
-  function tekenKlaar() {
+  function tekenKlaar(gestopt = false) {
+    const sec = Math.round(verstreken(speler, Date.now()) / 1000);
     opruimen();
     document.body.classList.remove('loopmodus');
     root.innerHTML = `
       <section class="loop" data-test="loopscherm">
-        <h1>Klaar!</h1>
-        <p class="uitleg" data-test="klaar">${training.naam} zit erop. Goed gedaan.</p>
-        <button type="button" class="primair breed" data-actie="afronden">Afronden</button>
+        <h1>${gestopt ? 'Gestopt' : 'Klaar!'}</h1>
+        <p class="uitleg" data-test="klaar">${gestopt
+          ? `Je bent gestopt na ${Math.round(sec / 60)} min. Wil je opslaan wat je gedaan hebt?`
+          : `${training.naam} zit erop. Goed gedaan.`}</p>
+        ${afrondFormulier({
+          afstandKm: afstandTotVerstreken(training, sec), duurSec: sec,
+          kcal: kcalTotVerstreken(training, sec, profiel.gewicht),
+        })}
       </section>`;
+    koppelAfronden(root, training, profiel, { opslag, opgeslagen: () => klaar?.(), annuleer: () => terug?.() });
   }
 
   function ververs() {
@@ -190,6 +199,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, terug, k
   }
 
   root.onclick = (e) => {
+    if (e.target.closest('form.afronden')) return;
     const actie = e.target.closest('[data-actie]')?.dataset.actie;
     const nu = Date.now();
     if (actie === 'geluid') geluid.zet(e.target.checked);
@@ -205,11 +215,9 @@ export function toonLoopscherm(root, training, { opslag = localStorage, terug, k
     if (actie === 'overslaan') { speler = overslaan(speler, nu); bewaar(); ververs(); }
     if (actie === 'stop') {
       if (!confirm('Training stoppen?')) return;
-      opruimen();
-      document.body.classList.remove('loopmodus');
-      terug?.();
+      speler = pauzeer(speler, nu);
+      tekenKlaar(true);
     }
-    if (actie === 'afronden') klaar?.(training, speler);
   };
 
   if (speler.gestartOp !== null) loop();

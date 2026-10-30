@@ -6,6 +6,7 @@ import { DAGEN } from './profiel.js';
 import { plusDagen, vandaagIso } from './datum.js';
 import { kmh, km, minuten, blokDuur, korteDatum } from './opmaak.js';
 import { kcalTraining } from './calorieen.js';
+import { laadResultaten, maakOngedaan } from './resultaten.js';
 
 const DAGNAAM = { ma: 'Ma', di: 'Di', wo: 'Wo', do: 'Do', vr: 'Vr', za: 'Za', zo: 'Zo' };
 const TYPE = { rustig: 'Rustig', kwaliteit: 'Kwaliteit', lang: 'Lang', doel: 'Doel' };
@@ -31,20 +32,35 @@ function verplaatsHtml(t, week, vandaag) {
   return `<div class="verplaats"><span class="hint">Verplaats naar</span><div class="dagknoppen">${knoppen}</div></div>`;
 }
 
-function trainingHtml(t, week, vandaag, gewicht) {
+function statusHtml(t, r, vandaag) {
+  if (r?.status === 'gedaan') {
+    return `<div class="status"><span class="hint">✓ Gedaan: ${km(r.afstandKm)} km · ${minuten(r.duurSec)} · ${r.kcal} kcal</span>
+      <button type="button" class="secundair klein" data-ongedaan="${t.id}">Ongedaan maken</button></div>`;
+  }
+  if (r?.status === 'overgeslagen') {
+    return `<div class="status"><span class="hint">Overgeslagen</span>
+      <button type="button" class="secundair klein" data-ongedaan="${t.id}">Ongedaan maken</button></div>`;
+  }
+  return t.datum <= vandaag ? `<div class="status"><a class="knop secundair klein" href="#afvinken/${t.id}">Afvinken</a></div>` : '';
+}
+
+function trainingHtml(t, week, vandaag, gewicht, r) {
+  const status = r?.status === 'gedaan' ? ' is-gedaan' : r?.status === 'overgeslagen' ? ' is-overgeslagen' : '';
+  const statusLabel = r?.status === 'gedaan' ? ' · <span class="label-gedaan">✓ gedaan</span>' : r?.status === 'overgeslagen' ? ' · overgeslagen' : '';
   return `
-    <details class="training training-${t.type}${t.datum === vandaag ? ' is-vandaag' : ''}" data-training="${t.id}">
+    <details class="training training-${t.type}${status}${t.datum === vandaag ? ' is-vandaag' : ''}" data-training="${t.id}">
       <summary>
         <span class="dag">${DAGNAAM[t.dag]}<small>${korteDatum(t.datum)}</small></span>
-        <span class="wat"><span class="label label-${t.type}">${TYPE[t.type]}${t.verplaatst ? ' · verplaatst' : ''}</span>${t.naam}
+        <span class="wat"><span class="label label-${t.type}">${TYPE[t.type]}${t.verplaatst ? ' · verplaatst' : ''}${statusLabel}</span>${t.naam}
           <small>${minuten(t.duurSec)} · ca. ${km(t.afstandKm)} km · ${kcalTraining(t, gewicht)} kcal</small></span>
       </summary>
-      ${verplaatsHtml(t, week, vandaag)}
+      ${statusHtml(t, r, vandaag)}
+      ${r ? '' : verplaatsHtml(t, week, vandaag)}
       <ol class="blokken">${t.blokken.map(blokRegel).join('')}</ol>
     </details>`;
 }
 
-function weekHtml(w, aanpassingen, vandaag, gewicht, huidig) {
+function weekHtml(w, aanpassingen, vandaag, gewicht, huidig, resultaten) {
   const vrij = new Set(aanpassingen.vrij);
   const vrijKnoppen = DAGEN.map((d, i) => {
     const datum = plusDagen(w.maandag, i);
@@ -56,7 +72,7 @@ function weekHtml(w, aanpassingen, vandaag, gewicht, huidig) {
       <h2>${w.label} ${BADGE[w.soort] ? `<span class="badge badge-${w.soort}">${BADGE[w.soort]}</span>` : ''}
         <small>${korteDatum(w.maandag)} – ${korteDatum(plusDagen(w.maandag, 6))}</small></h2>
       ${w.waarschuwingen.map((x) => `<div class="melding melding-te-snel" data-test="waarschuwing">⚠ ${x.tekst}</div>`).join('')}
-      <div class="kaart trainingen">${w.trainingen.map((t) => trainingHtml(t, w, vandaag, gewicht)).join('')}</div>
+      <div class="kaart trainingen">${w.trainingen.map((t) => trainingHtml(t, w, vandaag, gewicht, resultaten[t.id])).join('')}</div>
       ${w.vervallen.length ? `<p class="hint" data-test="vervallen">Vervalt deze week: ${w.vervallen.map((t) => t.naam).join(', ')}.</p>` : ''}
       <details class="week-aanpassen">
         <summary>Dagen vrij zetten deze week</summary>
@@ -77,7 +93,7 @@ export function toonSchema(root, profiel, { vandaag = vandaagIso(), opslag = loc
       ? `<p class="uitleg">Je schema start op maandag ${korteDatum(plan.weken[0].maandag)}.</p>` : '';
     root.innerHTML = `<h1>Schema</h1>${start}
       <p class="hint">Tik op een training om de blokken te zien of hem naar een andere dag te verplaatsen.</p>
-      ${plan.weken.map((w) => weekHtml(w, aanpassingen, vandaag, profiel.gewicht, w === huidige)).join('')}`;
+      ${plan.weken.map((w) => weekHtml(w, aanpassingen, vandaag, profiel.gewicht, w === huidige, laadResultaten(opslag))).join('')}`;
     if (openWeek) root.querySelector(`#week-${openWeek} .week-aanpassen`)?.setAttribute('open', '');
     if (openTraining) root.querySelector(`[data-training="${openTraining}"]`)?.setAttribute('open', '');
     const doel = root.querySelector(openWeek ? `#week-${openWeek}` : '.week.is-huidig');
@@ -92,6 +108,10 @@ export function toonSchema(root, profiel, { vandaag = vandaagIso(), opslag = loc
       aanpassingen = verplaats(pasToe(basisplan, aanpassingen), aanpassingen, knop.dataset.verplaats, knop.dataset.naar);
       bewaarAanpassingen(opslag, aanpassingen);
       teken({ openWeek: week, openTraining: knop.dataset.verplaats });
+      root.querySelector(`#week-${week} .week-aanpassen`)?.removeAttribute('open');
+    } else if (knop.dataset.ongedaan) {
+      maakOngedaan(opslag, knop.dataset.ongedaan);
+      teken({ openWeek: week, openTraining: knop.dataset.ongedaan });
       root.querySelector(`#week-${week} .week-aanpassen`)?.removeAttribute('open');
     } else if (knop.dataset.vrij) {
       aanpassingen = zetVrij(aanpassingen, knop.dataset.vrij, knop.getAttribute('aria-pressed') !== 'true');

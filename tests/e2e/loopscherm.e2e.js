@@ -68,8 +68,9 @@ try {
   await shot('story6-uitwandelen');
   await tijd(121_000);
   assert.match(await lees('klaar'), /6 × 400 m op 5 km-tempo zit erop/);
-  await page.getByRole('button', { name: 'Afronden' }).click();
-  await page.waitForSelector('[data-test=vandaag]');
+  await page.waitForSelector('[data-test=afronden]');
+  await page.getByRole('button', { name: 'Opslaan als gedaan' }).click();
+  await page.waitForSelector('[data-test=vandaag-gedaan]');
 
   assert.deepEqual(fouten, []);
   console.log('✓ story 6 loopscherm: alle browserchecks geslaagd');

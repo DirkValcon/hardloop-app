@@ -160,3 +160,17 @@ button.groot { font-size: 22px; padding: 18px; }
 a.knop { display: block; text-align: center; text-decoration: none; font-weight: 600; padding: 14px 18px; border-radius: 14px; margin-top: 12px; }
 a.knop.primair { background: var(--accent); color: var(--accent-tekst); }
 a.knop.is-uit { opacity: .45; pointer-events: none; }
+a.knop.secundair { background: var(--kaart); color: var(--tekst); border: 1px solid var(--lijn); margin-top: 0; }
+.klein-knoppen { margin-top: 10px; }
+.klein-knoppen > * { flex: 1; font-size: 15px; padding: 12px; }
+.gemist { border-color: #f08c00; }
+.gemist .knoppen { margin-top: 12px; }
+.gemist .knoppen > * { flex: 1; padding: 12px; font-size: 15px; }
+.gemist .dagknoppen { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); margin-top: 6px; }
+.gemist .dagknop small { font-weight: 400; color: var(--zacht); }
+.label-gedaan { color: #2f9e44; }
+.label-overgeslagen { color: var(--zacht); }
+.training.is-gedaan .wat > :not(.label) { opacity: .75; }
+.training.is-overgeslagen .wat { text-decoration: line-through; opacity: .6; }
+.status { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 16px 12px 74px; }
+a.knop.klein { padding: 8px 14px; font-size: 15px; margin: 0; }

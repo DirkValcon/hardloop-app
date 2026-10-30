@@ -18,3 +18,28 @@ export function kcalBlok(blok, gewicht) {
 export function kcalTraining(training, gewicht) {
   return Math.round(training.blokken.reduce((s, b) => s + kcalBlok(b, gewicht), 0));
 }
+
+// Verbruik voor het deel van de training dat echt gelopen is (bijvoorbeeld na een stop).
+export function kcalTotVerstreken(training, verstrekenSec, gewicht) {
+  let rest = verstrekenSec;
+  let kcal = 0;
+  for (const b of training.blokken) {
+    if (rest <= 0) break;
+    const deel = Math.min(rest, b.duurSec);
+    kcal += kcalBlok({ ...b, duurSec: deel }, gewicht);
+    rest -= deel;
+  }
+  return Math.round(kcal);
+}
+
+export function afstandTotVerstreken(training, verstrekenSec) {
+  let rest = verstrekenSec;
+  let km = 0;
+  for (const b of training.blokken) {
+    if (rest <= 0) break;
+    const deel = Math.min(rest, b.duurSec);
+    km += (b.kmh * deel) / 3600;
+    rest -= deel;
+  }
+  return Math.round(km * 100) / 100;
+}

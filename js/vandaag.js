@@ -1,8 +1,11 @@
 // Scherm Vandaag: de training van vandaag (of de eerstvolgende) met duur, afstand en calorieën.
 import { volgendeTraining } from './schema.js';
 import { huidigPlan } from './plan.js';
+import { laadResultaten, markeerOvergeslagen } from './resultaten.js';
+import { laadAanpassingen, bewaarAanpassingen, verplaats } from './aanpassingen.js';
+import { plusDagen } from './datum.js';
 import { kcalTraining } from './calorieen.js';
-import { vandaagIso, dagenTussen, datumTekst } from './datum.js';
+import { vandaagIso, dagenTussen, datumTekst, naarDatum } from './datum.js';
 import { kmh, km, minuten, korteDatum } from './opmaak.js';
 
 const TYPE = { rustig: 'Rustige loop', kwaliteit: 'Kwaliteitstraining', lang: 'Lange duurloop', doel: 'Doeldag' };
@@ -23,24 +26,71 @@ function fases(t) {
   ];
 }
 
-export function toonVandaag(root, profiel, { vandaag = vandaagIso() } = {}) {
-  const plan = huidigPlan(profiel, vandaag);
-  const volgende = volgendeTraining(plan, vandaag);
+const dagVan = (iso) => ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'][naarDatum(iso).getUTCDay()];
+
+// Gemiste trainingen van deze week: verplaatsen naar een vrije dag later deze week, overslaan of toch afvinken.
+function gemistHtml(gemist, week, vandaag) {
+  if (!gemist.length) return '';
+  const bezet = new Set(week.trainingen.map((t) => t.datum));
+  const vrij = Array.from({ length: 7 }, (_, i) => plusDagen(week.maandag, i)).filter((d) => d >= vandaag && !bezet.has(d));
+  return gemist.map((t) => `
+    <div class="kaart gemist" data-test="gemist" data-training="${t.id}">
+      <div class="label">Gemist · ${DAGNAAM[t.dag]} ${korteDatum(t.datum)}</div>
+      <strong>${t.naam}</strong>
+      ${vrij.length ? `<div class="hint">Verplaats naar een vrije dag:</div><div class="dagknoppen">${vrij.map((d) =>
+        `<button type="button" class="dagknop" data-verplaats="${t.id}" data-naar="${d}">${DAGNAAM[dagVan(d)].slice(0, 2)}<br><small>${korteDatum(d)}</small></button>`).join('')}</div>` : '<div class="hint">Er is geen vrije dag meer deze week.</div>'}
+      <div class="knoppen">
+        <button type="button" class="secundair" data-overslaan="${t.id}">Overslaan</button>
+        <a class="knop secundair" href="#afvinken/${t.id}">Toch gedaan</a>
+      </div>
+    </div>`).join('');
+}
+
+export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = localStorage } = {}) {
+  const plan = huidigPlan(profiel, vandaag, opslag);
+  const resultaten = laadResultaten(opslag);
+  const deWeek = plan.weken.find((w) => vandaag >= w.maandag && vandaag <= plusDagen(w.maandag, 6));
+  const gemist = deWeek ? deWeek.trainingen.filter((t) => t.datum < vandaag && !resultaten[t.id]) : [];
+  const vandaagGedaan = plan.weken.flatMap((w) => w.trainingen).filter((t) => t.datum === vandaag && resultaten[t.id]?.status === 'gedaan');
+  const volgende = volgendeTraining(plan, vandaag, resultaten);
+
+  root.onclick = (e) => {
+    const knop = e.target.closest('button');
+    if (knop?.dataset.verplaats) {
+      bewaarAanpassingen(opslag, verplaats(plan, laadAanpassingen(opslag), knop.dataset.verplaats, knop.dataset.naar));
+      toonVandaag(root, profiel, { vandaag, opslag });
+    } else if (knop?.dataset.overslaan) {
+      const t = plan.weken.flatMap((w) => w.trainingen).find((x) => x.id === knop.dataset.overslaan);
+      markeerOvergeslagen(opslag, t, vandaag);
+      toonVandaag(root, profiel, { vandaag, opslag });
+    }
+  };
+
+  const gedaanHtml = vandaagGedaan.map((t) => {
+    const r = resultaten[t.id];
+    return `<div class="kaart gedaan" data-test="vandaag-gedaan"><div class="label label-gedaan">✓ Vandaag gedaan</div>
+      <strong>${t.naam}</strong><div class="hint">${km(r.afstandKm)} km · ${minuten(r.duurSec)} · ${r.kcal} kcal</div></div>`;
+  }).join('');
+
   if (!volgende) {
-    root.innerHTML = `<h1>Vandaag</h1><div class="kaart"><p>Je schema zit erop. Gefeliciteerd met je 10 km!</p></div>`;
+    root.innerHTML = `<h1>Vandaag</h1>${gemistHtml(gemist, deWeek ?? plan.weken.at(-1), vandaag)}${gedaanHtml}
+      <div class="kaart"><p>Je schema zit erop. Gefeliciteerd met je 10 km!</p></div>`;
     return;
   }
   const { training: t, week, isVandaag } = volgende;
   const dagen = dagenTussen(vandaag, t.datum);
   const wanneer = isVandaag ? 'Vandaag'
     : dagen === 1 ? 'Morgen' : `${DAGNAAM[t.dag][0].toUpperCase()}${DAGNAAM[t.dag].slice(1)} ${korteDatum(t.datum)}`;
-  const rustdag = isVandaag ? '' : `<p class="uitleg" data-test="rustdag">${plan.weken[0].maandag > vandaag && week === plan.weken[0]
+  const rustdag = isVandaag || vandaagGedaan.length ? '' : `<p class="uitleg" data-test="rustdag">${plan.weken[0].maandag > vandaag && week === plan.weken[0]
     ? `Je schema start op ${datumTekst(plan.weken[0].maandag)}.` : 'Vandaag is een rustdag.'} Dit is je volgende training.</p>`;
   const totDoel = dagenTussen(vandaag, plan.doelDatum);
 
   root.innerHTML = `
     <h1>Vandaag</h1>
+    ${gemistHtml(gemist, deWeek, vandaag)}
+    ${gedaanHtml}
     ${rustdag}
+    ${vandaagGedaan.length ? '<h2>Volgende training</h2>' : ''}
     <article class="kaart vandaag-kaart training-${t.type}" data-test="vandaag" data-training="${t.id}">
       <div class="stapnr">${wanneer} · ${week.label}</div>
       <div class="label label-${t.type}">${TYPE[t.type]}</div>
@@ -55,6 +105,10 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso() } = {}) {
       </ol>
       <p class="hint">Helling ${String(profiel.helling).replace('.', ',')}% · uitwandelen op 0%</p>
       <a class="knop primair breed${isVandaag ? '' : ' is-uit'}" ${isVandaag ? `href="#loop/${t.id}"` : 'aria-disabled="true"'} role="button" data-actie="start">Start op loopband</a>
+      ${isVandaag ? `<div class="knoppen klein-knoppen">
+        <a class="knop secundair" href="#afvinken/${t.id}">Afvinken zonder app</a>
+        <button type="button" class="secundair" data-overslaan="${t.id}">Overslaan</button>
+      </div>` : ''}
     </article>
     <p class="hint" data-test="tot-doel">Nog ${totDoel} ${totDoel === 1 ? 'dag' : 'dagen'} tot je 10 km op ${datumTekst(plan.doelDatum)}.</p>`;
 }

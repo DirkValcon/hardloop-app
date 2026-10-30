@@ -221,10 +221,10 @@ function laatsteWeek(trainingen, profiel, b) {
 }
 
 // De training van vandaag, of anders de eerstvolgende. Null als het schema voorbij is.
-export function volgendeTraining(plan, vandaag) {
+export function volgendeTraining(plan, vandaag, afgerond = {}) {
   for (const week of plan.weken) {
     for (const t of week.trainingen) {
-      if (t.datum >= vandaag) return { training: t, week, isVandaag: t.datum === vandaag };
+      if (t.datum >= vandaag && !afgerond[t.id]) return { training: t, week, isVandaag: t.datum === vandaag };
     }
   }
   return null;
