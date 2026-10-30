@@ -36,3 +36,18 @@ import { opzet, DIRK } from './helpers.js';
     console.log('✓ startfout: hangende sessiecontrole blokkeert de app niet');
   } finally { await t.sluit(); }
 }
+
+// Loopt één scherm vast, dan staat de foutmelding op dat scherm en blijft de tabbalk werken.
+{
+  const t = await opzet({ profiel: DIRK });
+  try {
+    const echt = await readFile(new URL('../../js/schemaweergave.js', import.meta.url), 'utf8');
+    const kapot = echt.replace('const basisplan = maakPlan(profiel, { vandaag });', "throw new Error('testfout in schema');");
+    await t.page.route('**/js/schemaweergave.js', (r) => r.fulfill({ contentType: 'text/javascript', body: kapot }));
+    await t.page.goto(t.url + '#schema');
+    assert.match(await t.page.textContent('[data-test=tabfout]'), /testfout in schema/);
+    await t.page.getByRole('link', { name: 'Vandaag' }).click();
+    await t.page.getByRole('heading', { name: 'Vandaag' }).waitFor();
+    console.log('✓ startfout: fout op één scherm wordt getoond, de andere tabs blijven werken');
+  } finally { await t.sluit(); }
+}
