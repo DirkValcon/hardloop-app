@@ -12,6 +12,8 @@ import { kcalTraining } from './calorieen.js';
 import { huidigeGebruiker, toonInloggen, accountHtml, uitloggen, accountGegevens } from './account.js';
 import { synchroniseer, isEersteKeer, noteerWijziging, wisLokaal } from './sync.js';
 import { OPGESLAGEN } from './opgeslagen.js';
+import { maakOngedaan } from './resultaten.js';
+import { toonMelding } from './melding.js';
 
 const root = document.getElementById('app');
 let gebruiker = null;
@@ -28,6 +30,14 @@ const TABS = [
     icoon: '<circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>' },
 ];
 
+// Na opslaan: even laten zien dat het bewaard is, met de mogelijkheid het terug te draaien.
+function naOpslaan(training) {
+  toonMelding('Training opgeslagen als gedaan', {
+    actie: 'Ongedaan maken',
+    bijActie: () => { maakOngedaan(localStorage, training.id); start(); },
+  });
+}
+
 function toonLoop(profiel, trainingId) {
   const alle = huidigPlan(profiel, vandaagIso()).weken.flatMap((w) => w.trainingen);
   const training = alle.find((t) => t.id === trainingId);
@@ -38,7 +48,7 @@ function toonLoop(profiel, trainingId) {
     profiel,
     volgnummer: { nr: alle.indexOf(training) + 1, totaal: alle.length },
     terug: () => { location.hash = '#vandaag'; },
-    klaar: () => { location.hash = '#vandaag'; },
+    klaar: () => { location.hash = '#vandaag'; naOpslaan(training); },
   });
 }
 
@@ -51,7 +61,7 @@ function toonAfvinken(profiel, trainingId) {
   root.innerHTML = `<h1>Afvinken</h1><p class="uitleg">${training.naam}</p>
     ${afrondFormulier({ afstandKm: training.afstandKm, duurSec: training.duurSec, kcal: kcalTraining(training, profiel.gewicht) })}`;
   const terug = () => history.length > 1 ? history.back() : (location.hash = '#vandaag');
-  koppelAfronden(root, training, profiel, { opgeslagen: terug, annuleer: terug });
+  koppelAfronden(root, training, profiel, { opgeslagen: () => { terug(); naOpslaan(training); }, annuleer: terug });
 }
 
 // Nieuw schema maken vanuit Profiel: dezelfde stappen als de onboarding, en het vervangt het oude.

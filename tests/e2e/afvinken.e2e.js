@@ -114,3 +114,38 @@ const tekst = async (page, sel) => (await page.textContent(sel)).replace(/\s+/g,
     console.log('✓ story 7 afvinken: alle browserchecks geslaagd');
   } finally { await sluit(); }
 }
+
+// Story 20: overslaan, verplaatsen en afvinken op Vandaag kun je meteen ongedaan maken.
+{
+  const { page, url, fouten, shot, sluit } = await opzet({ vandaag: '2026-11-06', profiel });
+  try {
+    await page.goto(url);
+    const gemist = page.locator('[data-test=gemist]');
+    // Overslaan en terugdraaien.
+    await gemist.first().locator('summary').click();
+    await gemist.first().getByRole('button', { name: 'Overslaan' }).click();
+    assert.equal(await gemist.count(), 1);
+    assert.match(await tekst(page, '[data-test=melding]'), /Training overgeslagen/);
+    await shot('story20-ongedaan');
+    await page.getByRole('button', { name: 'Ongedaan maken' }).click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-test=gemist]').length === 2);
+    // Verplaatsen en terugdraaien.
+    await gemist.first().locator('summary').click();
+    await gemist.first().locator('[data-naar="2026-11-07"]').click();
+    assert.equal(await gemist.count(), 1);
+    assert.match(await tekst(page, '[data-test=melding]'), /Verplaatst naar zaterdag 7 nov/);
+    await page.getByRole('button', { name: 'Ongedaan maken' }).click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-test=gemist]').length === 2);
+    // Toch gedaan (afvinken) en terugdraaien.
+    await gemist.first().locator('summary').click();
+    await gemist.first().getByRole('link', { name: 'Toch gedaan' }).click();
+    await page.getByRole('button', { name: 'Opslaan als gedaan' }).click();
+    await page.waitForSelector('[data-test=vandaag]');
+    assert.equal(await gemist.count(), 1);
+    assert.match(await tekst(page, '[data-test=melding]'), /opgeslagen als gedaan/);
+    await page.getByRole('button', { name: 'Ongedaan maken' }).click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-test=gemist]').length === 2);
+    assert.deepEqual(fouten, []);
+    console.log('✓ story 20 ongedaan maken: alle browserchecks geslaagd');
+  } finally { await sluit(); }
+}

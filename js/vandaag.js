@@ -2,7 +2,8 @@
 import { volgendeTraining } from './schema.js';
 import { huidigPlan } from './plan.js';
 import { effectiefProfiel } from './instellingen.js';
-import { laadResultaten, markeerOvergeslagen } from './resultaten.js';
+import { laadResultaten, markeerOvergeslagen, maakOngedaan } from './resultaten.js';
+import { toonMelding } from './melding.js';
 import { laadAanpassingen, bewaarAanpassingen, verplaats } from './aanpassingen.js';
 import { plusDagen } from './datum.js';
 import { kcalTraining } from './calorieen.js';
@@ -48,6 +49,9 @@ function gemistHtml(gemist, week, vandaag) {
       </div>
     </details>`).join('');
 }
+
+// Na Ongedaan maken het huidige scherm opnieuw tekenen (ook als je intussen een ander tabblad opende).
+const verversScherm = () => window.dispatchEvent(new HashChangeEvent('hashchange'));
 
 const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 const hoofdletter = (t) => t[0].toUpperCase() + t.slice(1);
@@ -98,12 +102,19 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
     if (knop?.dataset.toon) {
       opnieuw({ gekozen: knop.dataset.toon === toon?.training.id ? null : knop.dataset.toon });
     } else if (knop?.dataset.verplaats) {
-      bewaarAanpassingen(opslag, verplaats(plan, laadAanpassingen(opslag), knop.dataset.verplaats, knop.dataset.naar));
+      const voor = laadAanpassingen(opslag);
+      bewaarAanpassingen(opslag, verplaats(plan, voor, knop.dataset.verplaats, knop.dataset.naar));
       opnieuw();
+      toonMelding(`Verplaatst naar ${DAGNAAM[dagVan(knop.dataset.naar)]} ${korteDatum(knop.dataset.naar)}`, {
+        actie: 'Ongedaan maken', bijActie: () => { bewaarAanpassingen(opslag, voor); verversScherm(); },
+      });
     } else if (knop?.dataset.overslaan) {
       const t = alle.find((x) => x.id === knop.dataset.overslaan);
       markeerOvergeslagen(opslag, t, vandaag);
       opnieuw();
+      toonMelding('Training overgeslagen', {
+        actie: 'Ongedaan maken', bijActie: () => { maakOngedaan(opslag, t.id); verversScherm(); },
+      });
     }
   };
 
