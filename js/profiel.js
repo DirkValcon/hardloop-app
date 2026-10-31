@@ -1,6 +1,6 @@
 // Profiel en doel: controleren, opslaan en laden.
 import { parseTijd } from './tijd.js';
-import { dagenTussen, plusDagen } from './datum.js';
+import { dagenTussen, plusDagen, maandagVan, datumTekst } from './datum.js';
 import { meldOpgeslagen } from './opgeslagen.js';
 import { doelafstand, vijfKmUitNiveau, tienKmUitDoel, MIN_WEKEN, MAX_WEKEN } from './generator.js';
 
@@ -11,14 +11,19 @@ export const OPSLAG_SLEUTEL = 'hardloop-app.profiel.v1';
 // Aantal weken van het schema van dit profiel (het vaste schema duurt 11 weken).
 export const schemaWeken = (profiel) => profiel?.schema?.weken ?? SCHEMA_WEKEN;
 
-// Vroegst mogelijke doeldatum: het hele schema vanaf vandaag.
-export function vroegsteDoeldatum(vandaag, weken = SCHEMA_WEKEN) {
-  return plusDagen(vandaag, weken * 7);
+// Maandag van week 1: het schema telt terug vanaf de week van de doeldatum.
+export function startVan(doeldatum, weken = SCHEMA_WEKEN) {
+  return plusDagen(maandagVan(doeldatum), -(weken - 1) * 7);
 }
 
-// Aantal hele weken extra tussen vandaag en de start van het schema.
+// Vroegst mogelijke doeldatum: week 1 is de huidige week (die telt dus mee).
+export function vroegsteDoeldatum(vandaag, weken = SCHEMA_WEKEN) {
+  return plusDagen(vandaag, (weken - 1) * 7);
+}
+
+// Aantal hele weken tussen deze week en week 1 van het schema.
 export function extraWeken(vandaag, doeldatum, weken = SCHEMA_WEKEN) {
-  return Math.max(0, Math.floor((dagenTussen(vandaag, doeldatum) - weken * 7) / 7));
+  return Math.max(0, Math.round(dagenTussen(maandagVan(vandaag), startVan(doeldatum, weken)) / 7));
 }
 
 // Elke stap controleert alleen zijn eigen velden, zodat de onboarding per stap kan valideren.
@@ -73,8 +78,8 @@ export function valideerVeld(veld, invoer, vandaag) {
     case 'doelDatum': {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(invoer.doelDatum ?? '')) return 'Kies een doeldatum.';
       const weken = wekenVan(invoer);
-      if (dagenTussen(vandaag, invoer.doelDatum) < weken * 7) {
-        return `Het schema duurt ${weken} weken: kies een datum die minstens ${weken} weken vooruit ligt.`;
+      if (startVan(invoer.doelDatum, weken) < maandagVan(vandaag)) {
+        return `Het schema duurt ${weken} weken (deze week telt mee): kies ${datumTekst(vroegsteDoeldatum(vandaag, weken))} of later.`;
       }
       return null;
     }
@@ -137,6 +142,7 @@ export function valideerProfiel(invoer, vandaag, { schemaId = `s${Date.now().toS
       doelDatum: invoer.doelDatum,
       extraWeken: extra,
       extraWekenKeuze: extra > 0 ? invoer.extraWekenKeuze : null,
+      ...(extra > 0 && invoer.extraWekenKeuze === 'basis' ? { basisVanaf: maandagVan(vandaag) } : {}),
       trainingsdagen: DAGEN.filter((d) => invoer.trainingsdagen.includes(d)),
       gewicht: Number(invoer.gewicht),
       helling: Number(invoer.helling),

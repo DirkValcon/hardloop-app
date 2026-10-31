@@ -3,7 +3,7 @@
 // afgevinkte trainingen worden later los bewaard, gekoppeld aan het id van de training.
 import { DAGEN } from './profiel.js';
 import { berekenZones, rondSnelheid } from './zones.js';
-import { naarDatum, plusDagen, vandaagIso } from './datum.js';
+import { naarDatum, plusDagen, vandaagIso, maandagVan } from './datum.js';
 import { genereerSjabloon } from './generator.js';
 
 export const SJABLOON_5_10 = {
@@ -119,10 +119,7 @@ export function verdeelDagen(trainingsdagen) {
   return Object.fromEntries(dagen.map((d) => [d, d === lang ? 'lang' : d === kwaliteit ? 'kwaliteit' : 'rustig']));
 }
 
-export function maandagVan(iso) {
-  const d = naarDatum(iso);
-  return plusDagen(iso, -((d.getUTCDay() + 6) % 7));
-}
+export { maandagVan };
 
 // ---------- Plan ----------
 
@@ -159,10 +156,11 @@ export function maakPlan(profiel, { sjabloon = sjabloonVoor(profiel), vandaag = 
 
   // Basisweken vóór het schema, als daarvoor gekozen is.
   if (profiel.extraWekenKeuze === 'basis') {
-    // Vast punt: de dag waarop het profiel is gemaakt, zodat de basisweken niet verschuiven als de tijd verstrijkt.
+    // Vast punt, zodat de basisweken niet verschuiven als de tijd verstrijkt: de week waarin ze
+    // gekozen zijn (basisVanaf), of bij oudere profielen de maandag na het aanmaken.
     const begin = profiel.aangemaaktOp ?? vandaag;
     const beginMaandag = maandagVan(begin);
-    const startMaandag = begin === beginMaandag ? begin : plusDagen(beginMaandag, 7);
+    const startMaandag = profiel.basisVanaf ?? (begin === beginMaandag ? begin : plusDagen(beginMaandag, 7));
     const aantal = Math.max(0, Math.round((naarDatum(eersteMaandag) - naarDatum(startMaandag)) / (7 * 86400000)));
     for (let i = 0; i < aantal; i++) {
       const maandag = plusDagen(startMaandag, i * 7);

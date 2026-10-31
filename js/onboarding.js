@@ -1,7 +1,7 @@
 // Onboarding in vijf stappen, ook gebruikt om een nieuw schema te maken (dat vervangt het oude).
 // Elke stap valideert zijn eigen velden voordat je verder kunt.
 import {
-  STAPPEN, DAGEN, valideerStap, valideerProfiel, bewaarProfiel, vroegsteDoeldatum, extraWeken, getal,
+  STAPPEN, DAGEN, valideerStap, valideerProfiel, bewaarProfiel, vroegsteDoeldatum, extraWeken, startVan, getal,
 } from './profiel.js';
 import { vandaagIso, datumTekst, plusDagen } from './datum.js';
 import { parseTijd, formatTijd } from './tijd.js';
@@ -100,14 +100,15 @@ export function toonOnboarding(root, klaar, { opslag = localStorage, vandaag = v
         <label class="titel" for="doelDatum">Doeldatum</label>
         <input type="date" id="doelDatum" name="doelDatum" min="${vroegst}"
           value="${invoer.doelDatum ?? ''}" ${ongeldig('doelDatum')}>
-        <div class="hint">Vroegst mogelijk: ${datumTekst(vroegst)}.</div>
+        <div class="hint">Vroegst mogelijk: ${datumTekst(vroegst)} (dan begin je deze week).${wekenOk && invoer.doelDatum && invoer.doelDatum >= vroegst
+          ? ` <span data-test="startweek">Week 1 begint op maandag ${datumTekst(startVan(invoer.doelDatum, weken()))}.</span>` : ''}</div>
         ${fout('doelDatum')}
       </div>
       ${extra > 0 ? `
       <fieldset class="veld keuzes" style="border:0;padding:0;margin:0 0 18px" ${ongeldig('extraWekenKeuze')}>
         <legend class="titel" style="margin-bottom:8px">Je hebt ${wekenTekst} meer dan nodig. Wat wil je daarmee?</legend>
         <label class="keuze"><input type="radio" name="extraWekenKeuze" value="later" ${invoer.extraWekenKeuze === 'later' ? 'checked' : ''}>
-          <span>Later starten<small>Het schema begint op ${datumTekst(plusDagen(invoer.doelDatum, -weken() * 7))}.</small></span></label>
+          <span>Later starten<small>Het schema begint op ${datumTekst(startVan(invoer.doelDatum, weken()))}.</small></span></label>
         <label class="keuze"><input type="radio" name="extraWekenKeuze" value="basis" ${invoer.extraWekenKeuze === 'basis' ? 'checked' : ''}>
           <span>Basisweken ervoor<small>Nu beginnen met ${wekenTekst} rustige duurlopen.</small></span></label>
         ${fout('extraWekenKeuze')}

@@ -4,7 +4,7 @@ import { valideerProfiel, valideerStap, laadProfiel, bewaarProfiel, extraWeken, 
 
 const VANDAAG = '2026-10-30';
 const geldig = {
-  maxKm: '5', tempo: '7:00', doelAfstand: 10, doelTijd: '70:00', weken: '11', doelDatum: '2027-01-15',
+  maxKm: '5', tempo: '7:00', doelAfstand: 10, doelTijd: '70:00', weken: '11', doelDatum: '2027-01-08',
   extraWekenKeuze: null, trainingsdagen: ['zo', 'di', 'do'], gewicht: '80', helling: '1',
 };
 
@@ -34,7 +34,7 @@ test('doeltijd is optioneel', () => {
 });
 
 test('halve marathon: doeltijd wordt omgerekend naar 10 km voor de snelheden', () => {
-  const r = valideerProfiel({ ...geldig, doelAfstand: '21.1', doelTijd: '2:30:00', weken: '12', doelDatum: '2027-01-22' }, VANDAAG);
+  const r = valideerProfiel({ ...geldig, doelAfstand: '21.1', doelTijd: '2:30:00', weken: '12', doelDatum: '2027-01-15' }, VANDAAG);
   assert.equal(r.ok, true, JSON.stringify(r.fouten));
   assert.equal(r.profiel.doelAfstand, 21.1);
   assert.equal(r.profiel.doelAfstandSeconden, 9000);
@@ -64,23 +64,27 @@ test('minder dan 3 of meer dan 5 dagen wordt geweigerd', () => {
   }
 });
 
-test('doeldatum moet minstens 11 weken vooruit liggen', () => {
-  assert.equal(vroegsteDoeldatum(VANDAAG), '2027-01-15');
-  assert.ok(valideerStap(2, { ...geldig, doelDatum: '2027-01-14' }, VANDAAG).doelDatum);
-  assert.deepEqual(valideerStap(2, { ...geldig, doelDatum: '2027-01-15' }, VANDAAG), {});
+test('doeldatum: het schema mag deze week beginnen, niet eerder', () => {
+  // Vrijdag 30 okt: week 1 = 26 okt t/m 1 nov, week 11 = 4 t/m 10 jan.
+  assert.equal(vroegsteDoeldatum(VANDAAG), '2027-01-08');
+  assert.ok(valideerStap(2, { ...geldig, doelDatum: '2027-01-03' }, VANDAAG).doelDatum);
+  assert.deepEqual(valideerStap(2, { ...geldig, doelDatum: '2027-01-04' }, VANDAAG), {});
+  assert.deepEqual(valideerStap(2, { ...geldig, doelDatum: '2027-01-10' }, VANDAAG), {});
   assert.ok(valideerStap(2, { ...geldig, doelDatum: '' }, VANDAAG).doelDatum);
 });
 
 test('bij extra weken moet je kiezen tussen later starten en basisweken', () => {
-  assert.equal(extraWeken(VANDAAG, '2027-01-21'), 0);
-  assert.equal(extraWeken(VANDAAG, '2027-01-22'), 1);
-  assert.equal(extraWeken(VANDAAG, '2027-03-05'), 7);
+  assert.equal(extraWeken(VANDAAG, '2027-01-10'), 0); // begint deze week
+  assert.equal(extraWeken(VANDAAG, '2027-01-11'), 1); // begint volgende week
+  assert.equal(extraWeken(VANDAAG, '2027-01-17'), 1);
+  assert.equal(extraWeken(VANDAAG, '2027-03-05'), 8);
   const ver = { ...geldig, doelDatum: '2027-03-05' };
   assert.ok(valideerStap(2, ver, VANDAAG).extraWekenKeuze);
   const r = valideerProfiel({ ...ver, extraWekenKeuze: 'basis' }, VANDAAG);
   assert.equal(r.ok, true);
-  assert.equal(r.profiel.extraWeken, 7);
+  assert.equal(r.profiel.extraWeken, 8);
   assert.equal(r.profiel.extraWekenKeuze, 'basis');
+  assert.equal(r.profiel.basisVanaf, '2026-10-26');
 });
 
 test('gewicht en helling binnen grenzen', () => {

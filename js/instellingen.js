@@ -59,7 +59,10 @@ export function wijzigProfiel(profiel, invoer, vandaag) {
 
   if (invoer.doelDatum !== profiel.doelDatum) {
     const extra = extraWeken(vandaag, invoer.doelDatum, schemaWeken(profiel));
-    resultaat = { ...resultaat, doelDatum: invoer.doelDatum, extraWeken: extra, extraWekenKeuze: extra > 0 ? invoer.extraWekenKeuze : null };
+    const keuze = extra > 0 ? invoer.extraWekenKeuze : null;
+    resultaat = { ...resultaat, doelDatum: invoer.doelDatum, extraWeken: extra, extraWekenKeuze: keuze };
+    // Nieuw gekozen basisweken beginnen deze week.
+    if (keuze === 'basis' && profiel.extraWekenKeuze !== 'basis') resultaat.basisVanaf = maandagVan(vandaag);
   }
 
   const begonnen = maakPlan(resultaat, { vandaag }).start <= vandaag;

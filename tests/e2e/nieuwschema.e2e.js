@@ -31,7 +31,7 @@ try {
   await shot('story14-doel');
   await volgende();
   assert.match(await page.textContent('[data-test=advies]'), /Advies: 12 weken/);
-  await page.fill('#doelDatum', '2027-01-31');
+  await page.fill('#doelDatum', '2027-01-24'); // week 1 = deze week
   await page.locator('#doelDatum').dispatchEvent('change');
   await shot('story14-weken');
   await volgende();
@@ -43,7 +43,7 @@ try {
   await volgende();
 
   await page.waitForSelector('[data-test=tot-doel]');
-  assert.match(await page.textContent('[data-test=tot-doel]'), /tot je Halve marathon op .*31 januari 2027/i);
+  assert.match(await page.textContent('[data-test=tot-doel]'), /tot je Halve marathon op .*24 januari 2027/i);
 
   await page.getByRole('link', { name: 'Schema' }).click();
   await page.waitForSelector('.week');
