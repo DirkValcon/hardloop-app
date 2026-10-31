@@ -29,6 +29,20 @@ try {
   assert.match(await blokken.last().textContent(), /Uitwandelen.*2 min.*5,5.*0% helling/s);
   await shot('story3-schema');
 
+  // Story 21: alleen week 1 (de eerste, het schema moet nog beginnen) staat open, de rest is ingeklapt met een samenvatting.
+  assert.deepEqual(await page.locator('.week-inhoud').evaluateAll((d) => d.map((x) => x.open)), [true, ...Array(10).fill(false)]);
+  assert.match(await page.textContent('#week-2 [data-test=week-samenvatting]'), /^3 trainingen · ca\. [\d,]+ km$/);
+  assert.equal(await page.locator('#week-2 .training').first().isVisible(), false);
+  await page.locator('#week-2 .week-inhoud > summary').click();
+  assert.equal(await page.locator('#week-2 .training').first().isVisible(), true);
+  // Week aanpassen: verplaatsen en vrije dagen op één plek.
+  await page.locator('#week-1 .week-aanpassen summary').click();
+  assert.equal(await page.locator('#week-1 .week-aanpassen .verplaats-rij').count(), 3);
+  await page.getByRole('button', { name: 'Verplaats Rustige duurloop 4 km naar ma 2 nov' }).click();
+  assert.match(await page.locator('#week-1 .training summary').first().textContent(), /Ma\s*2 nov.*verplaatst/s);
+  assert.equal(await page.locator('#week-1 .week-aanpassen').getAttribute('open'), '');
+  await shot('story21-schema');
+
   // Tabs werken.
   await page.getByRole('link', { name: 'Profiel' }).click();
   await page.waitForSelector('h1:text-is("Profiel")');

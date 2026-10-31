@@ -46,6 +46,20 @@ try {
   await tijd(2_000);
   assert.notEqual(await lees('timer'), gepauzeerd);
 
+  // Story 18: per ongeluk een blok overgeslagen? Ongedaan maken.
+  await page.getByRole('button', { name: 'Volgend blok' }).click();
+  assert.equal(await lees('bloktitel'), 'Warming-up 3 van 3');
+  assert.match(await lees('melding'), /Blok overgeslagen/);
+  await page.getByRole('button', { name: 'Ongedaan maken' }).click();
+  assert.equal(await lees('bloktitel'), 'Warming-up 2 van 3');
+  assert.equal(await page.locator('[data-test=melding]').count(), 0);
+
+  // Story 18: kort op Stop tikken stopt niet, maar legt uit dat je hem moet vasthouden.
+  await page.getByRole('button', { name: 'Stop' }).click();
+  await tijd(1_500);
+  assert.equal(await page.locator('[data-test=bloktitel]').count(), 1, 'training loopt door');
+  assert.match(await lees('melding'), /Houd Stop ingedrukt/);
+
   // Overslaan naar het eerste interval.
   await page.getByRole('button', { name: 'Volgend blok' }).click();
   await page.getByRole('button', { name: 'Volgend blok' }).click();

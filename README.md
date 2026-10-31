@@ -38,3 +38,15 @@ npm run serve     # lokaal bekijken op http://127.0.0.1:8080/
 | 9 | Instellingen wijzigen | klaar |
 | 12 | Inloggen met Google (verplicht) | klaar |
 | 13 | Gegevens synchroniseren tussen apparaten | klaar |
+| 14 | Nieuw schema voor 5 km, 10 km, halve of hele marathon | klaar |
+| 15 | Nieuwe, vriendelijke stijl (licht en donker, kleur per trainingstype) | klaar |
+| 18 | Loopscherm: Stop vasthouden, grote Pauze, blok overslaan ongedaan maken, alles in beeld | klaar |
+| 16 | Vandaag: Start bovenaan, gemiste trainingen compact eronder | klaar |
+| 17 | Vandaag: datum, weeknummer en weekstrook met gedaan/gemist/gepland | klaar |
+| 19 | Afronden: eerst samenvatting, aanpassen achter een knop, Niet opslaan vraagt bevestiging | klaar |
+| 20 | Ongedaan maken na overslaan, verplaatsen of afvinken | klaar |
+| 21 | Schema: weken ingeklapt met samenvatting, Naar deze week, Week aanpassen | klaar |
+| 22 | Profiel in delen: Mijn schema, Mijn snelheden, Instellingen, Account; elk apart wijzigen | klaar |
+| 23 | Voortgang: deze week bovenaan, geen dubbele cijfers | klaar |
+| 24 | Melding Opgeslagen en synchronisatiestatus onder Profiel (ook offline) | klaar |
+| 25 | Laptop: zijbalk, Schema in twee kolommen, Voortgang naast elkaar | klaar |

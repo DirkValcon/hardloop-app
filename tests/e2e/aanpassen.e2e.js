@@ -12,11 +12,13 @@ try {
 
   // Kwaliteitstraining van donderdag naar zaterdag: waarschuwing over twee zware dagen achter elkaar.
   await week1().locator('[data-training=w1-kwaliteit] summary').click();
+  await week1().locator('[data-training=w1-kwaliteit] .andere-dag .link-knop').click();
   await page.getByRole('button', { name: 'Verplaats naar za 7 nov' }).click();
   const r1 = await rij();
   assert.match(r1[1], /^Za ?7 nov Kwaliteit · verplaatst ?6 × 400 m/);
   assert.match(await week1().locator('[data-test=waarschuwing]').textContent(), /Twee zware trainingen achter elkaar/);
   // Vandaag (maandag) mag nog; de eigen dag niet.
+  await week1().locator('[data-training=w1-kwaliteit] .andere-dag .link-knop').click();
   assert.equal(await page.getByRole('button', { name: 'Verplaats naar ma 2 nov' }).isEnabled(), true);
   assert.equal(await page.getByRole('button', { name: 'Verplaats naar za 7 nov' }).isDisabled(), true);
   await shot('story5-waarschuwing');

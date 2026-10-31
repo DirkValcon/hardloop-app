@@ -6,7 +6,7 @@ const { page, url, fouten, shot, sluit } = await opzet({ vandaag: '2026-11-03', 
 const tekst = async (sel) => (await page.textContent(sel)).replace(/\s+/g, ' ').trim();
 try {
   await page.goto(url + '#profiel');
-  await page.getByRole('button', { name: 'Wijzigen' }).click();
+  await page.getByRole('button', { name: 'Snelheden aanpassen' }).click();
   assert.equal(await page.getAttribute('#eigen-rustig', 'placeholder'), '6,9');
   await page.fill('#eigen-rustig', '85');
   await page.getByRole('button', { name: 'Opslaan' }).click();
@@ -28,7 +28,7 @@ try {
 
   // Wijzigen opnieuw openen: de eigen waarden staan erin.
   await page.getByRole('link', { name: 'Profiel' }).click();
-  await page.getByRole('button', { name: 'Wijzigen' }).click();
+  await page.getByRole('button', { name: 'Snelheden aanpassen' }).click();
   assert.equal(await page.inputValue('#eigen-rustig'), '8,5');
   assert.equal(await page.inputValue('#eigen-tempo10'), '');
   assert.deepEqual(fouten, []);

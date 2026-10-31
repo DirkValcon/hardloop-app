@@ -74,3 +74,12 @@ export async function nepSupabase(context, { ingelogd = true, tabel = {} } = {})
   }
   return verzoeken;
 }
+
+// Stop op het loopscherm: knop ingedrukt houden (met nep- of echte klok).
+export async function houdStopIngedrukt(page) {
+  await page.locator('[data-actie=stop]').hover();
+  await page.mouse.down();
+  try { await page.clock.runFor(1200); } catch { /* echte klok */ }
+  await page.waitForTimeout(1200);
+  await page.mouse.up();
+}

@@ -6,6 +6,10 @@ import { formatTijd } from './tijd.js';
 import { tempoPerKm } from './zones.js';
 import { schatKcal } from './resultaten.js';
 import { afrondFormulier, koppelAfronden } from './afronden.js';
+import { toonMelding, sluitMelding } from './melding.js';
+
+// Stoppen gaat door Stop even ingedrukt te houden, zodat je niet per ongeluk stopt.
+export const STOP_VASTHOUDEN_MS = 1000;
 
 export const OPSLAG_LOPEND = 'hardloop-app.lopend.v1';
 
@@ -83,7 +87,7 @@ export const kilometerTekst = (nr, sec) => `Kilometer ${nr}. ${spreekDuur(sec)}.
 
 // ---------- Scherm ----------
 
-export function toonLoopscherm(root, training, { opslag = localStorage, profiel, terug, klaar } = {}) {
+export function toonLoopscherm(root, training, { opslag = localStorage, profiel, terug, klaar, volgnummer = null } = {}) {
   const geluid = maakGeluid();
   let speler = maakSpeler(training.blokken);
   let timer = null;
@@ -104,6 +108,9 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   };
   const opruimen = () => {
     clearInterval(timer);
+    timer = null;
+    sluitMelding();
+    root.onpointerdown = root.onpointerup = root.onpointercancel = root.onpointerout = null;
     stopSchermAan?.();
     opslag.removeItem(OPSLAG_LOPEND);
   };
@@ -134,6 +141,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
           <span class="loop-totaal" data-test="totaal"></span>
         </div>
         <div class="loop-stand"><span data-test="afstand"></span><span data-test="laatste-km"></span></div>
+        <div class="loop-timer" data-test="timer"></div>
         <div class="loop-groot">
           <div class="snelheid-vak">
             <span class="waarde" data-test="snelheid"></span><span class="eenheid">km/u</span>
@@ -142,18 +150,19 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
               <button type="button" data-actie="sneller" aria-label="Sneller">+</button>
             </div>
           </div>
-          <div><span class="waarde" data-test="helling"></span><span class="eenheid">% helling</span></div>
+          <div><span class="waarde" data-test="helling"></span><span class="eenheid">% helling</span>
+            <span class="loop-tempo" data-test="tempo"></span></div>
         </div>
-        <div class="loop-tempo" data-test="tempo"></div>
-        <div class="loop-timer" data-test="timer"></div>
         <div class="loop-balk">${balk}</div>
         <div class="loop-volgende" data-test="volgende"></div>
-        <div class="knoppen">
-          <button type="button" class="secundair" data-actie="pauze">Pauze</button>
-          <button type="button" class="secundair" data-actie="overslaan">Volgend blok</button>
-          <button type="button" class="secundair" data-actie="stop">Stop</button>
-          <button type="button" class="primair" data-actie="afronden" hidden>Training afronden</button>
+        <div class="bediening">
+          <button type="button" class="rond-klein stop-knop" data-actie="stop" aria-label="Stop (ingedrukt houden)">
+            <svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg><span>Stop</span></button>
+          <button type="button" class="rond-groot" data-actie="pauze">Pauze</button>
+          <button type="button" class="rond-klein" data-actie="overslaan">Volgend blok</button>
+          <button type="button" class="primair afronden-knop" data-actie="afronden" hidden>Training afronden</button>
         </div>
+        <p class="bediening-hint" data-test="stop-hint">Houd Stop ingedrukt om te stoppen</p>
       </section>`;
   }
 
@@ -163,18 +172,20 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     const afstandKm = Math.round(t.afstandKm * 100) / 100;
     opruimen();
     document.body.classList.remove('loopmodus');
+    const samenvatting = { ...(volgnummer ?? {}) };
     root.innerHTML = `
-      <section class="loop" data-test="loopscherm">
-        <h1>${gestopt ? 'Gestopt' : 'Klaar!'}</h1>
+      <section class="loop loop-klaar" data-test="loopscherm">
+        <div class="klaar-kop${gestopt ? ' is-gestopt' : ''}" aria-hidden="true">${gestopt ? '■' : '✓'}</div>
+        <h1>${gestopt ? 'Gestopt' : 'Klaar! Goed gedaan.'}</h1>
         <p class="uitleg" data-test="klaar">${gestopt
           ? `Je bent gestopt na ${Math.round(sec / 60)} min. Wil je opslaan wat je gedaan hebt?`
-          : `${training.naam} zit erop. Goed gedaan.`}</p>
+          : `${training.naam} zit erop.`}</p>
         ${afrondFormulier({
           afstandKm, duurSec: sec,
           kcal: schatKcal(training, afstandKm, profiel.gewicht),
-        })}
+        }, {}, { samenvatting })}
       </section>`;
-    koppelAfronden(root, training, profiel, { opslag, opgeslagen: () => klaar?.(), annuleer: () => terug?.() });
+    koppelAfronden(root, training, profiel, { opslag, samenvatting, opgeslagen: () => klaar?.(), annuleer: () => terug?.() });
   }
 
   function ververs() {
@@ -198,6 +209,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     root.querySelector('[data-actie=afronden]').hidden = !t.extra;
     sectie.classList.toggle('is-gepauzeerd', t.gepauzeerd);
     root.querySelector('[data-actie=pauze]').textContent = t.gepauzeerd ? 'Hervat' : 'Pauze';
+    root.querySelector('[data-test=stop-hint]').hidden = t.extra;
     root.querySelectorAll('.seg').forEach((el, i) => {
       el.classList.toggle('gedaan', i < t.index);
       el.classList.toggle('nu', i === t.index);
@@ -231,6 +243,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
 
   function loop() {
     tekenLopend();
+    koppelStop();
     stopSchermAan = houdSchermAan();
     // Na herladen niet opnieuw alle kilometers en het huidige blok aankondigen.
     const t = toestand(speler, Date.now());
@@ -245,6 +258,8 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     const nu = Date.now();
     if (actie === 'geluid') geluid.zet(e.target.checked);
     if (actie === 'terug') { document.body.classList.remove('loopmodus'); terug?.(); }
+    // Stop werkt door vasthouden (hieronder); alleen met het toetsenbord vragen we het.
+    if (actie === 'stop' && e.detail === 0 && confirm('Training stoppen?')) stoppen();
     if (actie === 'start') {
       geluid.ontgrendel();
       geluid.zeg(`Start. ${uitspraak(training.blokken[0])}`);
@@ -253,7 +268,16 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
       loop();
     }
     if (actie === 'pauze') { speler = speler.pauzeOp === null ? pauzeer(speler, nu) : hervat(speler, nu); bewaar(); ververs(); }
-    if (actie === 'overslaan') { speler = overslaan(speler, nu); bewaar(); ververs(); }
+    if (actie === 'overslaan') {
+      const ervoor = speler;
+      speler = overslaan(speler, nu);
+      bewaar();
+      ververs();
+      toonMelding('Blok overgeslagen', {
+        actie: 'Ongedaan maken',
+        bijActie: () => { if (timer === null) return; speler = ervoor; bewaar(); ververs(); },
+      });
+    }
     if (actie === 'sneller' || actie === 'langzamer') {
       speler = pasSnelheidAan(speler, nu, actie === 'sneller' ? 0.1 : -0.1);
       bewaar();
@@ -263,12 +287,36 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
       speler = pauzeer(speler, nu);
       tekenKlaar();
     }
-    if (actie === 'stop') {
-      if (!confirm('Training stoppen?')) return;
-      speler = pauzeer(speler, nu);
-      tekenKlaar(true);
-    }
   };
+
+  function stoppen() {
+    speler = pauzeer(speler, Date.now());
+    tekenKlaar(true);
+  }
+
+  // Stop vasthouden: de ring loopt vol en na STOP_VASTHOUDEN_MS stopt de training.
+  let vasthouden = null;
+  const loslaten = () => {
+    if (!vasthouden) return;
+    clearTimeout(vasthouden.timer);
+    vasthouden.knop.classList.remove('is-vasthouden');
+    toonMelding('Houd Stop ingedrukt om te stoppen', { duurMs: 2500 });
+    vasthouden = null;
+  };
+  function koppelStop() {
+    root.onpointerdown = (e) => {
+      const knop = e.target.closest('[data-actie=stop]');
+      if (!knop) return;
+      e.preventDefault();
+      knop.classList.add('is-vasthouden');
+      const v = { knop };
+      v.timer = setTimeout(() => { vasthouden = null; stoppen(); }, STOP_VASTHOUDEN_MS);
+      vasthouden = v;
+    };
+    root.onpointerup = loslaten;
+    root.onpointercancel = loslaten;
+    root.onpointerout = (e) => { if (vasthouden && !vasthouden.knop.contains(e.relatedTarget)) loslaten(); };
+  }
 
   if (speler.gestartOp !== null) loop();
   else tekenVoorStart();
