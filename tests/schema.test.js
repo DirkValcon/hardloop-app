@@ -139,3 +139,16 @@ test('eigen snelheden komen in de trainingen terecht', () => {
   assert.ok(kwal.blokken.filter((b) => b.soort === 'interval').every((b) => b.kmh === 9.2));
   assert.ok(kwal.blokken.filter((b) => b.soort === 'herstel').every((b) => b.kmh === 8.5));
 });
+
+test('elke training heeft blokken, ook als de lange-loopdag vóór de doeldatum valt', () => {
+  const dagen = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
+  for (let m = 1; m < 128; m++) {
+    const trainingsdagen = dagen.filter((_, i) => (m >> i) & 1);
+    for (const doelDatum of ['2027-01-13', '2027-01-15', '2027-01-17']) {
+      const plan = maakPlan({ ...DIRK, trainingsdagen, doelDatum }, { vandaag: VANDAAG });
+      for (const t of alleTrainingen(plan)) {
+        assert.ok(Array.isArray(t.blokken) && t.type, `${trainingsdagen.join(',')} ${doelDatum}: ${t.id} zonder blokken`);
+      }
+    }
+  }
+});

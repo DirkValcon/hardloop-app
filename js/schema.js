@@ -190,7 +190,8 @@ export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagI
       const datum = plusDagen(maandag, dagIndex(dag));
       const soort = indeling[dag];
       if (soort === 'lang') {
-        return { id: `w${w}-lang`, datum, dag, ...(sjabloon.lang[i] ? langeLoop(sjabloon.lang[i], b) : null) };
+        // Week 11 heeft geen lange loop (dan de 10 km); het type zorgt dat laatsteWeek hem weglaat.
+        return { id: `w${w}-lang`, datum, dag, type: 'lang', ...(sjabloon.lang[i] ? langeLoop(sjabloon.lang[i], b) : null) };
       }
       if (soort === 'kwaliteit') {
         const def = sjabloon.kwaliteit[i];
