@@ -3,7 +3,7 @@ import { berekenVoortgang } from './voortgang.js';
 import { huidigPlan } from './plan.js';
 import { effectiefProfiel } from './instellingen.js';
 import { laadResultaten } from './resultaten.js';
-import { vandaagIso, datumTekst } from './datum.js';
+import { vandaagIso, datumTekst, plusDagen } from './datum.js';
 import { formatTijd } from './tijd.js';
 import { km, korteDatum, minuten } from './opmaak.js';
 
@@ -22,14 +22,27 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
   }).join('');
   const labels = v.perWeek.map((w) => `<span>${w.label.replace('W', '')}</span>`).join('');
   const doel = v.doelSeconden ? ` · doel ${formatTijd(v.doelSeconden)}` : '';
+  // Deze week (of de eerste week, als het schema nog moet beginnen).
+  const dezeWeek = v.perWeek.find((w) => vandaag >= w.maandag && vandaag <= plusDagen(w.maandag, 6))
+    ?? (v.perWeek[0]?.maandag > vandaag ? v.perWeek[0] : null);
+  const weekNaam = (w) => (w.label.startsWith('B') ? 'Basisweek ' + w.label.slice(1) : 'Week ' + w.label.slice(1));
+  const dezeWeekHtml = dezeWeek ? `
+    <div class="kaart deze-week" data-test="deze-week">
+      <span class="label">Deze week · ${weekNaam(dezeWeek)}</span>
+      <p class="deze-week-km"><strong data-test="km-week">${km(v.kmDezeWeek)}</strong> van ${km(dezeWeek.geplandKm)} km</p>
+      <div class="voortgangsbalk"><span style="width:${Math.min(100, (v.kmDezeWeek / Math.max(dezeWeek.geplandKm, 0.1)) * 100)}%"></span></div>
+      <small class="hint">${dezeWeek.gedaan} van ${dezeWeek.aantal} trainingen gedaan</small>
+    </div>` : '';
 
   root.innerHTML = `
-    <h1>Voortgang en statistieken</h1>
+    <h1>Voortgang</h1>
+    ${dezeWeekHtml}
+    <h2>Je schema</h2>
     <div class="tegels" data-test="tegels">
-      <div class="tegel"><strong data-test="totaal-km">${km(v.totaalKm)}</strong><small>km gelopen</small></div>
-      <div class="tegel"><strong data-test="totaal-kcal">${v.totaalKcal}</strong><small>kcal verbruikt</small></div>
       <div class="tegel"><strong data-test="trainingen">${v.gedaan}/${v.totaal}</strong><small>trainingen gedaan</small></div>
       <div class="tegel"><strong data-test="weken">${v.wekenTotDoel}</strong><small>${v.wekenTotDoel === 1 ? 'week' : 'weken'} tot ${korteDatum(plan.doelDatum)}</small></div>
+      <div class="tegel"><strong data-test="totaal-km">${km(v.totaalKm)}</strong><small>km gelopen</small></div>
+      <div class="tegel"><strong data-test="totaal-kcal">${v.totaalKcal}</strong><small>kcal verbruikt</small></div>
     </div>
     <div class="voortgangsbalk" role="progressbar" aria-valuemin="0" aria-valuemax="${v.totaal}" aria-valuenow="${v.gedaan}">
       <span style="width:${(v.gedaan / v.totaal) * 100}%"></span></div>
@@ -44,10 +57,8 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
 
     <h2>Statistieken</h2>
     <div class="tegels" data-test="stat-tegels">
-      <div class="tegel"><strong data-test="km-week">${km(v.kmDezeWeek)}</strong><small>km deze week</small></div>
       <div class="tegel"><strong data-test="km-maand">${km(v.kmDezeMaand)}</strong><small>km deze maand</small></div>
       <div class="tegel"><strong data-test="tempo">${v.gemiddeldTempo ? formatTijd(v.gemiddeldTempo) : '–'}</strong><small>gemiddeld per km</small></div>
-      <div class="tegel"><strong data-test="km-totaal">${km(v.totaalKm)}</strong><small>km in totaal</small></div>
     </div>
     ${v.perMaand.length ? `
     <div class="kaart">
@@ -81,6 +92,6 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
     const w = v.perWeek[Number(staaf.dataset.week)];
     root.querySelectorAll('.staaf').forEach((s) => s.classList.toggle('is-gekozen', s === staaf));
     root.querySelector('[data-test=grafiek-detail]').innerHTML =
-      `<strong>${w.label.startsWith('B') ? 'Basisweek ' + w.label.slice(1) : 'Week ' + w.label.slice(1)}</strong> · ${km(w.km)} van ${km(w.geplandKm)} km · ${w.kcal} kcal · ${w.gedaan}/${w.aantal} trainingen`;
+      `<strong>${weekNaam(w)}</strong> · ${km(w.km)} van ${km(w.geplandKm)} km · ${w.kcal} kcal · ${w.gedaan}/${w.aantal} trainingen`;
   };
 }

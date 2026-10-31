@@ -431,3 +431,11 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
 .deel[hidden] { display: none; }
 .kaart .melding { margin: 12px 0 0; }
 .kaart .klein-knoppen { margin-top: 14px; }
+
+/* ---------- Voortgang: deze week bovenaan (story 23) ---------- */
+.deze-week { padding: 20px; }
+.deze-week-km { margin: 6px 0 0; font-size: 18px; color: var(--zacht); font-weight: 600; }
+.deze-week-km strong { font-size: 44px; color: var(--tekst); letter-spacing: -.02em; margin-right: 4px; }
+.deze-week .voortgangsbalk { height: 12px; border-radius: 6px; margin: 10px 0 8px; }
+.deze-week .voortgangsbalk span { background: var(--rustig); border-radius: 6px; }
+.tegels + .kaart { margin-top: 10px; }

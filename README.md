@@ -47,3 +47,4 @@ npm run serve     # lokaal bekijken op http://127.0.0.1:8080/
 | 20 | Ongedaan maken na overslaan, verplaatsen of afvinken | klaar |
 | 21 | Schema: weken ingeklapt met samenvatting, Naar deze week, Week aanpassen | klaar |
 | 22 | Profiel in delen: Mijn schema, Mijn snelheden, Instellingen, Account; elk apart wijzigen | klaar |
+| 23 | Voortgang: deze week bovenaan, geen dubbele cijfers | klaar |
