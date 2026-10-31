@@ -36,6 +36,8 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
 
   root.innerHTML = `
     <h1>Voortgang</h1>
+    <div class="vg-boven">
+    <div class="vg-kolom">
     ${dezeWeekHtml}
     <h2>Je schema</h2>
     <div class="tegels" data-test="tegels">
@@ -46,6 +48,8 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
     </div>
     <div class="voortgangsbalk" role="progressbar" aria-valuemin="0" aria-valuemax="${v.totaal}" aria-valuenow="${v.gedaan}">
       <span style="width:${(v.gedaan / v.totaal) * 100}%"></span></div>
+    </div>
+    <div class="vg-kolom">
 
     <h2>Kilometers per week</h2>
     <div class="kaart grafiek">
@@ -53,6 +57,8 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
       <div class="staven" data-test="staven">${staven}</div>
       <div class="staaf-labels">${labels}</div>
       <div class="legenda"><span><i class="l-gedaan"></i>Gelopen</span><span><i class="l-plan"></i>Gepland</span></div>
+    </div>
+    </div>
     </div>
 
     <h2>Statistieken</h2>

@@ -49,3 +49,4 @@ npm run serve     # lokaal bekijken op http://127.0.0.1:8080/
 | 22 | Profiel in delen: Mijn schema, Mijn snelheden, Instellingen, Account; elk apart wijzigen | klaar |
 | 23 | Voortgang: deze week bovenaan, geen dubbele cijfers | klaar |
 | 24 | Melding Opgeslagen en synchronisatiestatus onder Profiel (ook offline) | klaar |
+| 25 | Laptop: zijbalk, Schema in twee kolommen, Voortgang naast elkaar | klaar |

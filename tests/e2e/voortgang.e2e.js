@@ -29,7 +29,7 @@ try {
   assert.equal(await page.textContent('h1'), 'Voortgang');
   assert.match(await lees('deze-week'), /Deze week · Week 2 6,1 van [\d,]+ km .*1 van 3 trainingen gedaan/);
   assert.equal(await page.locator('[data-test=km-totaal]').count(), 0);
-  const eerste = await page.evaluate(() => document.querySelector('h1').nextElementSibling.dataset.test);
+  const eerste = await page.evaluate(() => document.querySelector('h1 ~ * [data-test]').dataset.test);
   assert.equal(eerste, 'deze-week');
   assert.match(await lees('tempo'), /^8:41$/);
   const maand = await page.locator('[data-test=per-maand] tbody tr').first().locator('th, td').allTextContents();

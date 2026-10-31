@@ -447,3 +447,31 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
 .syncstatus.is-offline .sync-icoon, .syncstatus.is-mislukt .sync-icoon { background: var(--doel); }
 .syncstatus.is-bezig .sync-icoon { animation: knipper 1s infinite alternate; }
 @keyframes knipper { to { opacity: .3; } }
+
+/* ---------- Laptop: zijbalk en meer kolommen (story 25). De iPhone-weergave blijft gelijk. ---------- */
+@media (min-width: 900px) {
+  body.met-tabs { padding-left: 248px; }
+  nav.tabs {
+    top: 16px; bottom: 16px; left: 16px; right: auto; width: 208px; margin: 0;
+    flex-direction: column; justify-content: flex-start; gap: 4px; padding: 14px 10px;
+  }
+  nav.tabs::before { content: "Loopschema"; font-weight: 800; font-size: 20px; padding: 6px 12px 14px; color: var(--tekst); }
+  nav.tabs a { flex: none; display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 10px; font-size: 16px; }
+  nav.tabs svg { margin: 0; }
+  nav.tabs a[aria-current=page] { background: var(--accent-zacht); }
+  nav.tabs a[aria-current=page] svg { background: none; }
+  body.met-tabs main { max-width: 1040px; padding: 32px 8px 48px; }
+  body.met-tabs main:has(> .weekstrook), body.met-tabs main:has(> [data-test=samenvatting]) { max-width: 760px; }
+  .toast, .naar-week { left: calc(248px + (100vw - 248px) / 2); right: auto; transform: translateX(-50%); width: min(488px, 80vw); }
+  .naar-week { width: auto; }
+  body:not(.met-tabs) .toast { left: 50%; }
+
+  /* Schema: weken in twee kolommen. */
+  main:has(> .week) { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; align-items: start; }
+  main:has(> .week) > :not(.week) { grid-column: 1 / -1; }
+
+  /* Voortgang: deze week en je schema naast de grafiek. */
+  .vg-boven { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  .vg-boven .vg-kolom:last-child > h2:first-child { margin-top: 0; }
+  .tegels { grid-template-columns: repeat(2, 1fr); }
+}
