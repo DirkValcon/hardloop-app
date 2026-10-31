@@ -11,9 +11,17 @@ try {
     if (!localStorage.getItem('hardloop-app.resultaten.v1')) localStorage.setItem('hardloop-app.resultaten.v1', JSON.stringify(r));
   }, resultaten);
   await page.goto(url + '#profiel');
-  await page.getByRole('button', { name: 'Wijzigen' }).click();
+  // Story 22: elk deel van Profiel wijzig je apart.
+  await page.getByRole('button', { name: 'Schema wijzigen' }).click();
   await page.waitForSelector('[data-test=instellingen]');
   assert.equal(await page.inputValue('#vijfKmTijd'), '35:00');
+  assert.equal(await page.locator('#gewicht').isVisible(), false, 'alleen de velden van dit deel');
+  await page.fill('#vijfKmTijd', '33:00');
+  await page.getByRole('button', { name: 'Opslaan' }).click();
+  await page.waitForSelector('[data-test=samenvatting]');
+  await page.getByRole('button', { name: 'Instellingen wijzigen' }).click();
+  await page.waitForSelector('[data-test=instellingen]');
+  assert.equal(await page.locator('#vijfKmTijd').isVisible(), false);
 
   // Ongeldig: twee dagen.
   await page.getByLabel('dinsdag').uncheck({ force: true });
@@ -25,7 +33,6 @@ try {
   await page.getByLabel('donderdag').uncheck({ force: true });
   await page.getByLabel('woensdag').check({ force: true });
   await page.getByLabel('vrijdag').check({ force: true });
-  await page.fill('#vijfKmTijd', '33:00');
   await page.fill('#helling', '2');
   await shot('story9-wijzigen');
   await page.getByRole('button', { name: 'Opslaan' }).click();
@@ -46,6 +53,7 @@ try {
   assert.deepEqual(await dagen(3), ['Ma', 'Wo', 'Vr', 'Zo']);
   assert.match(await tekst('[data-training=w1-rustig] summary'), /✓ gedaan/);
   // Week 1 houdt de oude snelheid en helling, week 2 krijgt de nieuwe.
+  await page.locator('#week-1 .week-inhoud > summary').click(); // vorige week is ingeklapt (story 21)
   await page.locator('[data-training=w1-rustig] summary').click();
   assert.match(await tekst('[data-training=w1-rustig] .blok-rustig'), /7,1 km\/u ?1% helling/);
   await page.locator('[data-training=w2-rustig] summary').click();

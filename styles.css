@@ -426,3 +426,8 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
 .verplaats-rij .hint { display: block; margin: 0 0 4px; }
 .naar-week { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(100px + env(safe-area-inset-bottom)); z-index: 40; background: var(--tekst); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 15px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
 .naar-week[hidden] { display: none; }
+
+/* ---------- Profiel in delen (story 22) ---------- */
+.deel[hidden] { display: none; }
+.kaart .melding { margin: 12px 0 0; }
+.kaart .klein-knoppen { margin-top: 14px; }
