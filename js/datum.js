@@ -22,6 +22,12 @@ export function plusDagen(iso, dagen) {
   return naarIso(d);
 }
 
+// Maandag van de week waarin `iso` valt.
+export function maandagVan(iso) {
+  const d = naarDatum(iso);
+  return plusDagen(iso, -((d.getUTCDay() + 6) % 7));
+}
+
 export function dagenTussen(vanIso, totIso) {
   return Math.round((naarDatum(totIso) - naarDatum(vanIso)) / 86400000);
 }

@@ -30,23 +30,57 @@ function blokTitel(b) {
 function maakGeluid() {
   let ctx = null;
   let aan = true;
+  // Lopende uitspraken bewaren: anders ruimt de browser ze soms op vóór ze klinken.
+  const wachtrij = new Set();
+  let laatsteStart = 0;
+
+  // iPhone: zonder 'playback' zet de stille-modusschakelaar al het webgeluid uit.
+  const zetAfspeelmodus = () => { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* oudere iOS */ } };
+
+  const wekContext = () => {
+    if (!ctx) return;
+    // iOS zet de context op 'suspended' of 'interrupted' na een scherm-uit of een melding.
+    if (ctx.state !== 'running') ctx.resume?.().catch(() => {});
+  };
+
   return {
     get aan() { return aan; },
     zet(v) { aan = v; },
+    // Moet binnen een tik van de gebruiker gebeuren, anders blijft iOS stil. Mag vaker: elke tik
+    // op het loopscherm ontgrendelt opnieuw (bijvoorbeeld na herladen midden in een training).
     ontgrendel() {
-      // Moet binnen een tik van de gebruiker gebeuren, anders blijft iOS stil.
-      try { ctx ??= new (window.AudioContext || window.webkitAudioContext)(); ctx.resume?.(); } catch { ctx = null; }
+      zetAfspeelmodus();
+      try {
+        ctx ??= new (window.AudioContext || window.webkitAudioContext)();
+        wekContext();
+        // Een heel kort stil geluidje: dit opent het geluidskanaal op iOS echt.
+        const buf = ctx.createBuffer(1, 1, 22050);
+        const bron = ctx.createBufferSource();
+        bron.buffer = buf;
+        bron.connect(ctx.destination);
+        bron.start(0);
+      } catch { ctx = null; }
+      // Spraak ontgrendelen met een lege uitspraak, alleen als er nog niets gezegd wordt.
+      try {
+        if (window.speechSynthesis && !speechSynthesis.speaking && !speechSynthesis.pending) {
+          const u = new SpeechSynthesisUtterance(' ');
+          u.volume = 0;
+          speechSynthesis.speak(u);
+        }
+      } catch { /* geen spraak */ }
     },
+    wek: wekContext,
     piep(aantal = 1, hoog = false) {
       navigator.vibrate?.(Array.from({ length: aantal * 2 - 1 }, (_, i) => (i % 2 ? 120 : 200)));
       if (!aan || !ctx) return;
+      wekContext();
       for (let i = 0; i < aantal; i++) {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.frequency.value = hoog ? 1320 : 880;
         const t = ctx.currentTime + i * 0.3;
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.6, t + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
         osc.connect(gain).connect(ctx.destination);
         osc.start(t);
@@ -55,10 +89,21 @@ function maakGeluid() {
     },
     zeg(tekst) {
       if (!aan || !window.speechSynthesis) return;
-      const u = new SpeechSynthesisUtterance(tekst);
-      u.lang = 'nl-NL';
-      // Niet afbreken: een kilometertijd en een blokaankondiging mogen na elkaar komen.
-      speechSynthesis.speak(u);
+      try {
+        // iOS-spraak kan vastlopen (blijft "bezig" zonder geluid). Hangt hij langer dan 20 s, dan opnieuw beginnen.
+        if (speechSynthesis.speaking && Date.now() - laatsteStart > 20000) { speechSynthesis.cancel(); wachtrij.clear(); }
+        if (speechSynthesis.paused) speechSynthesis.resume();
+        const u = new SpeechSynthesisUtterance(tekst);
+        u.lang = 'nl-NL';
+        const stem = speechSynthesis.getVoices?.().find((v) => v.lang?.replace('_', '-').startsWith('nl'));
+        if (stem) u.voice = stem;
+        wachtrij.add(u);
+        u.onstart = () => { laatsteStart = Date.now(); };
+        u.onend = u.onerror = () => wachtrij.delete(u);
+        if (!speechSynthesis.speaking) laatsteStart = Date.now();
+        // Niet afbreken: een kilometertijd en een blokaankondiging mogen na elkaar komen.
+        speechSynthesis.speak(u);
+      } catch { /* geen spraak */ }
     },
   };
 }
@@ -112,6 +157,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     sluitMelding();
     root.onpointerdown = root.onpointerup = root.onpointercancel = root.onpointerout = null;
     stopSchermAan?.();
+    document.removeEventListener('visibilitychange', geluidTerug);
     opslag.removeItem(OPSLAG_LOPEND);
   };
 
@@ -129,6 +175,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
         <div class="loop-balk">${balk}</div>
         <label class="keuze geluid-keuze"><input type="checkbox" data-actie="geluid" checked>
           <span>Geluid en gesproken aanwijzingen<small>Zet het volume van je iPhone aan.</small></span></label>
+        <button type="button" class="secundair breed" data-actie="test-geluid">Test geluid</button>
         <button type="button" class="primair breed groot" data-actie="start">Start</button>
       </section>`;
   }
@@ -241,10 +288,14 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, extra: t.extra };
   }
 
+  // Terug in de app (scherm weer aan): het geluid weer wakker maken.
+  const geluidTerug = () => { if (document.visibilityState === 'visible') geluid.wek(); };
+
   function loop() {
     tekenLopend();
     koppelStop();
     stopSchermAan = houdSchermAan();
+    document.addEventListener('visibilitychange', geluidTerug);
     // Na herladen niet opnieuw alle kilometers en het huidige blok aankondigen.
     const t = toestand(speler, Date.now());
     vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, extra: t.extra, km: Math.floor(t.afstandKm), kmOpMs: t.echtMs };
@@ -256,7 +307,9 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     if (e.target.closest('form.afronden')) return;
     const actie = e.target.closest('[data-actie]')?.dataset.actie;
     const nu = Date.now();
+    if (actie && actie !== 'start' && actie !== 'terug' && speler.gestartOp !== null) geluid.ontgrendel();
     if (actie === 'geluid') geluid.zet(e.target.checked);
+    if (actie === 'test-geluid') { geluid.ontgrendel(); geluid.piep(2, true); geluid.zeg('Geluid werkt. Zo klinkt een aankondiging.'); }
     if (actie === 'terug') { document.body.classList.remove('loopmodus'); terug?.(); }
     // Stop werkt door vasthouden (hieronder); alleen met het toetsenbord vragen we het.
     if (actie === 'stop' && e.detail === 0 && confirm('Training stoppen?')) stoppen();
@@ -320,5 +373,5 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
 
   if (speler.gestartOp !== null) loop();
   else tekenVoorStart();
-  return () => { clearInterval(timer); stopSchermAan?.(); };
+  return () => { clearInterval(timer); stopSchermAan?.(); document.removeEventListener('visibilitychange', geluidTerug); };
 }

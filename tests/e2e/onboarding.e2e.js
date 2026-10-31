@@ -47,13 +47,13 @@ try {
   await page.locator('#weken').dispatchEvent('change');
   assert.match(await page.textContent('[data-test=blessurewaarschuwing]'), /blessures/);
   await shot('3-weken-waarschuwing');
-  await page.fill('#doelDatum', '2027-01-10');
+  await page.fill('#doelDatum', '2027-01-03'); // week 1 zou vorige week zijn
   await page.locator('#doelDatum').dispatchEvent('change');
   await volgende();
-  assert.match(await foutmelding(), /11 weken/);
+  assert.match(await foutmelding(), /11 weken \(deze week telt mee\)/);
   await page.fill('#doelDatum', '2027-03-05');
   await page.locator('#doelDatum').dispatchEvent('change');
-  assert.match(await page.textContent('legend'), /7 weken meer/);
+  assert.match(await page.textContent('legend'), /8 weken meer/);
   await volgende();
   assert.match(await foutmelding(), /extra weken/);
   await page.getByText('Basisweken ervoor').click();
@@ -88,7 +88,7 @@ try {
   await page.getByRole('link', { name: 'Profiel' }).click();
   const controleer = async () => {
     const tekst = await page.textContent('[data-test=samenvatting]');
-    for (const verwacht of ['10 km in 11 weken', '5 km in 7:00 /km', '10 km in 1:10:00', '5 maart 2027', '7 basisweken vooraf', 'di, do, zo', '80 kg', '1%']) {
+    for (const verwacht of ['10 km in 11 weken', '5 km in 7:00 /km', '10 km in 1:10:00', '5 maart 2027', '8 basisweken vooraf', 'di, do, zo', '80 kg', '1%']) {
       assert.ok(tekst.includes(verwacht), `samenvatting mist "${verwacht}": ${tekst}`);
     }
   };
@@ -97,10 +97,10 @@ try {
   await controleer();
   await shot('6-samenvatting');
 
-  // Het schema heeft 7 basisweken + 11 weken en eindigt met de 10 km.
+  // Het schema heeft 8 basisweken (vanaf deze week) + 11 weken en eindigt met de 10 km.
   await page.getByRole('link', { name: 'Schema' }).click();
   await page.waitForSelector('.week');
-  assert.equal(await page.locator('.week').count(), 18);
+  assert.equal(await page.locator('.week').count(), 19);
 
   assert.deepEqual(fouten, [], 'JavaScript-fouten op de pagina');
   console.log('✓ story 1 onboarding: alle browserchecks geslaagd');

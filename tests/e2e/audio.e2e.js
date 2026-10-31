@@ -12,7 +12,7 @@ try {
     window.__gezegd = [];
     Object.defineProperty(window, 'speechSynthesis', {
       configurable: true,
-      value: { speak: (u) => window.__gezegd.push(u.text), cancel() {} },
+      value: { speak: (u) => { if (u.text.trim()) window.__gezegd.push(u.text); }, cancel() {} },
     });
   });
   await page.goto(url);

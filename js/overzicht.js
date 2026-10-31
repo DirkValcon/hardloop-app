@@ -1,9 +1,9 @@
 // Scherm Profiel: je gegevens, je snelheden en het formulier om ze te wijzigen.
 import { formatTijd, parseTijd } from './tijd.js';
-import { datumTekst, vandaagIso, plusDagen } from './datum.js';
+import { datumTekst, vandaagIso, plusDagen, dagenTussen } from './datum.js';
 import { haalbaarheidHtml, zonesHtml, doelHtml } from './zonesweergave.js';
 import { doelafstand } from './generator.js';
-import { DAGEN, bewaarProfiel, extraWeken, vroegsteDoeldatum, schemaWeken } from './profiel.js';
+import { DAGEN, bewaarProfiel, extraWeken, vroegsteDoeldatum, schemaWeken, startVan } from './profiel.js';
 import { effectiefProfiel, valideerWijziging, wijzigProfiel } from './instellingen.js';
 import { maandagVan } from './schema.js';
 import { korteDatum, kmh, km } from './opmaak.js';
@@ -20,16 +20,29 @@ function komendeWijzigingen(profiel, vandaag) {
     `<div class="melding" data-test="komend">Vanaf maandag ${korteDatum(h.vanaf)}${h.trainingsdagen ? `: trainingsdagen ${h.trainingsdagen.join(', ')}` : ''}.</div>`).join('');
 }
 
+// "week van 2 november (volgende week)"
+function weekTekst(maandag, vandaag) {
+  const nu = maandagVan(vandaag);
+  const erbij = maandag === nu ? ' (deze week)' : maandag === plusDagen(nu, 7) ? ' (volgende week)' : '';
+  return `week van ${korteDatum(maandag)}${erbij}`;
+}
+
+// Keuzes voor de startweek: deze week en de 16 weken erna, plus de huidige start als die al voorbij is.
+function startweekOpties(huidig, vandaag) {
+  const nu = maandagVan(vandaag);
+  const weken = Array.from({ length: 17 }, (_, i) => plusDagen(nu, i * 7));
+  if (!weken.includes(huidig)) (huidig < nu ? weken.unshift(huidig) : weken.push(huidig));
+  return weken.map((m) => `<option value="${m}" ${m === huidig ? 'selected' : ''}>${weekTekst(m, vandaag)}</option>`).join('');
+}
+
 const DAGVOLGORDE = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
 
 // Profiel in vier delen, elk met een eigen knop om alleen dat deel te wijzigen.
 function overzichtHtml(profiel, vandaag, account = '') {
   const p = effectiefProfiel(profiel, vandaag);
-  const extra = p.extraWeken > 0
-    ? (p.extraWekenKeuze === 'basis'
-      ? `<dt>Extra</dt><dd>${p.extraWeken} ${p.extraWeken === 1 ? 'basisweek' : 'basisweken'} vooraf</dd>`
-      : `<dt>Start</dt><dd>${p.extraWeken} ${p.extraWeken === 1 ? 'week' : 'weken'} later</dd>`)
-    : '';
+  const extra = `<dt>Week 1</dt><dd data-test="startweek">${weekTekst(startVan(p.doelDatum, schemaWeken(p)), vandaag)}</dd>${
+    p.extraWeken > 0 && p.extraWekenKeuze === 'basis'
+      ? `<dt>Extra</dt><dd>${p.extraWeken} ${p.extraWeken === 1 ? 'basisweek' : 'basisweken'} vooraf</dd>` : ''}`;
   return `
     <h1>Profiel</h1>
     <div data-test="samenvatting">
@@ -92,6 +105,9 @@ function formulierHtml(invoer, profiel, vandaag, fouten = {}, sectie = 'instelli
         <input type="text" inputmode="numeric" id="vijfKmTijd" name="vijfKmTijd" value="${invoer.vijfKmTijd}" ${ongeldig('vijfKmTijd')}>${fout('vijfKmTijd')}</div>
       <div class="veld"><label class="titel" for="doelTijd">Doeltijd 10 km (optioneel)</label>
         <input type="text" inputmode="numeric" id="doelTijd" name="doelTijd" value="${invoer.doelTijd}" ${ongeldig('doelTijd')}>${fout('doelTijd')}</div>`}
+      <div class="veld"><label class="titel" for="startweek">Startweek (week 1)</label>
+        <select id="startweek" name="startweek" data-test="startweek-keuze">${startweekOpties(startVan(invoer.doelDatum, schemaWeken(profiel)), vandaag)}</select>
+        <div class="hint">Schuift het hele schema op, de doeldatum schuift mee.</div></div>
       <div class="veld"><label class="titel" for="doelDatum">Doeldatum</label>
         <input type="date" id="doelDatum" name="doelDatum" value="${invoer.doelDatum}" min="${vroegsteDoeldatum(vandaag, schemaWeken(profiel))}" ${ongeldig('doelDatum')}>
         <div class="hint">Een andere doeldatum verschuift het hele schema.</div>${fout('doelDatum')}</div>
@@ -165,6 +181,14 @@ export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = 
       };
     };
     form.querySelector('#doelDatum').addEventListener('change', () => toonFormulier(lees()));
+    // Andere startweek: de doeldatum schuift evenveel weken mee; extra weken betekent dan later starten.
+    form.querySelector('#startweek').addEventListener('change', (e) => {
+      const nu = lees();
+      const oud = startVan(nu.doelDatum, schemaWeken(profiel));
+      const doelDatum = plusDagen(nu.doelDatum, dagenTussen(oud, e.target.value));
+      const extra = extraWeken(vandaag, doelDatum, schemaWeken(profiel));
+      toonFormulier({ ...nu, doelDatum, extraWekenKeuze: extra > 0 ? (nu.extraWekenKeuze ?? 'later') : null });
+    });
     form.querySelector('[data-actie=annuleer]').addEventListener('click', () => toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd, account, uitloggen, nieuwSchema }));
     form.addEventListener('submit', (e) => {
       e.preventDefault();

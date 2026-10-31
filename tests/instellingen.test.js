@@ -59,7 +59,7 @@ test('gewicht geldt meteen; doeldatum alleen gecontroleerd als hij verandert', (
   const p = wijzigProfiel(DIRK, invoer({ gewicht: '78' }), VANDAAG);
   assert.equal(p.gewicht, 78);
   assert.deepEqual(valideerWijziging(DIRK, invoer(), VANDAAG), {}); // doeldatum < 11 weken, maar ongewijzigd
-  assert.ok(valideerWijziging(DIRK, invoer({ doelDatum: '2027-01-24' }), VANDAAG).doelDatum);
+  assert.ok(valideerWijziging(DIRK, invoer({ doelDatum: '2027-01-16' }), VANDAAG).doelDatum); // week 1 zou vorige week zijn
   assert.ok(valideerWijziging(DIRK, invoer({ trainingsdagen: ['ma'] }), VANDAAG).trainingsdagen);
 });
 
@@ -74,4 +74,13 @@ test('eigen snelheden: gelden vanaf deze week, leeg = berekend, ongeldig geweige
   // Weer leegmaken: terug naar berekend.
   const terug = wijzigProfiel(p, invoer({ eigen: {} }), VANDAAG);
   assert.deepEqual(effectiefProfiel(terug, VANDAAG).eigenSnelheden, {});
+});
+
+test('startweek: een doeldatum zodat week 1 deze week is mag, de doeldatum verschuift het schema', () => {
+  // Woensdag 11 nov: week 1 mag de week van 9 nov zijn (doeldatum in de week van 18 jan).
+  const invoerNu = invoer({ doelDatum: '2027-01-24' });
+  assert.deepEqual(valideerWijziging(DIRK, invoerNu, VANDAAG), {});
+  const p = wijzigProfiel(DIRK, invoerNu, VANDAAG);
+  assert.equal(maakPlan(p, { vandaag: VANDAAG }).start, '2026-11-09');
+  assert.equal(p.extraWeken, 0);
 });
