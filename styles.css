@@ -352,3 +352,19 @@ body.loopmodus main { padding: 10px 0 12px; }
 .toast button { background: transparent; color: var(--accent); padding: 8px 10px; font-size: 15px; flex: none; }
 body:not(.met-tabs) .toast { bottom: calc(20px + env(safe-area-inset-bottom)); }
 body.loopmodus .toast { top: calc(10px + env(safe-area-inset-top)); bottom: auto; }
+
+/* ---------- Vandaag: gemiste training compact (story 16) ---------- */
+details.gemist { padding: 0; }
+details.gemist > summary { display: flex; align-items: center; gap: 12px; padding: 14px 16px; list-style: none; cursor: pointer; }
+details.gemist > summary::-webkit-details-marker { display: none; }
+details.gemist[open] > summary { padding-bottom: 6px; }
+details.gemist > :not(summary) { margin-left: 16px; margin-right: 16px; }
+details.gemist > .knoppen { margin-bottom: 16px; }
+.gemist-icoon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--doel-zacht); color: var(--doel); font-weight: 800; }
+.gemist-wat { flex: 1; min-width: 0; }
+.gemist-wat strong { margin: 0; }
+.gemist-wat small { display: block; color: var(--zacht); font-size: 14px; }
+.gemist-actie { color: var(--accent); font-weight: 700; font-size: 15px; white-space: nowrap; }
+.gemist-actie::after { content: " ›"; }
+details.gemist[open] .gemist-actie::after { content: " ⌄"; }
+.vandaag-kaart .fases { margin-top: 16px; }

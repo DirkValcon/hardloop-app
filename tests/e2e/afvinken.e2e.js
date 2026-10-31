@@ -56,6 +56,13 @@ const tekst = async (page, sel) => (await page.textContent(sel)).replace(/\s+/g,
     await page.goto(url);
     const gemist = page.locator('[data-test=gemist]');
     assert.equal(await gemist.count(), 2); // di en do
+    // Story 16: de training van vandaag staat bovenaan, de gemiste trainingen compact eronder.
+    const volgorde = await page.evaluate(() => [...document.querySelectorAll('[data-test=vandaag], [data-test=gemist]')].map((e) => e.dataset.test));
+    assert.deepEqual(volgorde, ['vandaag', 'gemist', 'gemist']);
+    const start = await page.locator('[data-actie=start]').boundingBox();
+    assert.ok(start.y + start.height <= page.viewportSize().height - 90, 'Start zichtbaar zonder scrollen, boven de tabbalk');
+    await gemist.first().locator('summary').click();
+    await gemist.nth(1).locator('summary').click();
     await shot('story7-gemist');
 
     // Dinsdag: toch gedaan, met de standaardwaarden.
@@ -67,6 +74,7 @@ const tekst = async (page, sel) => (await page.textContent(sel)).replace(/\s+/g,
     assert.equal(await gemist.count(), 1);
 
     // Donderdag: verplaatsen naar zaterdag 7 nov.
+    await gemist.first().locator('summary').click();
     const knoppen = await gemist.first().locator('[data-verplaats]').allTextContents();
     assert.deepEqual(knoppen.map((k) => k.replace(/\s+/g, '')), ['vr6nov', 'za7nov']); // vandaag en zaterdag zijn vrij
     await gemist.first().locator('[data-naar="2026-11-07"]').click();
