@@ -12,7 +12,7 @@ test('gedaan opslaan en weer laden', () => {
   const o = opslag();
   markeerGedaan(o, t, { afstandKm: 5.62, duurMin: 49, kcal: 450 }, '2026-11-03');
   assert.deepEqual(laadResultaten(o)[t.id], {
-    status: 'gedaan', datum: '2026-11-03', gepland: '2026-11-03', type: 'rustig', afstandKm: 5.62, duurSec: 2940, kcal: 450,
+    status: 'gedaan', datum: '2026-11-03', gepland: '2026-11-03', type: 'rustig', naam: t.naam, afstandKm: 5.62, duurSec: 2940, kcal: 450,
   });
 });
 

@@ -4,6 +4,7 @@
 import { DAGEN } from './profiel.js';
 import { berekenZones, rondSnelheid } from './zones.js';
 import { naarDatum, plusDagen, vandaagIso } from './datum.js';
+import { genereerSjabloon } from './generator.js';
 
 export const SJABLOON_5_10 = {
   id: '5-10',
@@ -133,7 +134,13 @@ export function profielVoorWeek(profiel, maandag) {
     .reduce((p, { vanaf, ...velden }) => ({ ...p, ...velden }), profiel);
 }
 
-export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagIso() } = {}) {
+// Een profiel met een eigen schema (doelafstand, niveau, weken) krijgt een gegenereerd sjabloon;
+// oudere profielen houden het vaste 5 → 10 km-schema.
+export function sjabloonVoor(profiel) {
+  return profiel.schema ? genereerSjabloon(profiel.schema) : SJABLOON_5_10;
+}
+
+export function maakPlan(profiel, { sjabloon = sjabloonVoor(profiel), vandaag = vandaagIso() } = {}) {
   const cache = new Map();
   const opWeek = (maandag) => {
     const p = profielVoorWeek(profiel, maandag);
@@ -204,24 +211,36 @@ export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagI
         : { id: `w${w}-extra${extraNr - 1}`, datum, dag, extra: true, ...rustigeLoop(sjabloon.extraRustig[i], b) };
     });
 
-    if (w === sjabloon.weken) trainingen = laatsteWeek(trainingen, p, b);
+    if (w === sjabloon.weken) trainingen = laatsteWeek(trainingen, p, b, sjabloon.doelKm ?? 10, w);
     weken.push({
-      nummer: w, soort: sjabloon.herstelweken.includes(w) ? 'herstel' : w === sjabloon.weken ? 'taper' : 'opbouw',
+      nummer: w,
+      soort: sjabloon.herstelweken.includes(w) ? 'herstel'
+        : w === sjabloon.weken || sjabloon.taperweken?.includes(w) ? 'taper' : 'opbouw',
       label: `Week ${w}`, maandag, trainingen,
     });
   }
 
-  return { sjabloon: sjabloon.id, zones: opWeek(maandagVan(vandaag)).zones, weken, start: weken[0].maandag, doelDatum: profiel.doelDatum };
+  // Trainingen van een eigen schema krijgen het schema-id ervoor, zodat afgevinkte trainingen en
+  // aanpassingen van een vorig schema niet op het nieuwe terechtkomen.
+  const prefix = profiel.schema?.id ? `${profiel.schema.id}-` : '';
+  if (prefix) for (const w of weken) w.trainingen = w.trainingen.map((t) => ({ ...t, id: prefix + t.id }));
+  const doelKm = sjabloon.doelKm ?? 10;
+  return {
+    sjabloon: sjabloon.id, zones: opWeek(maandagVan(vandaag)).zones, weken, start: weken[0].maandag, doelDatum: profiel.doelDatum,
+    doelKm, doelNaam: sjabloon.doelNaam ?? `${doelKm} km`,
+  };
 }
 
-// Week 11: de 10 km valt op de doeldatum. Trainingen na de doeldatum vervallen; past het niet,
-// dan valt eerst een extra rustige loop weg, daarna de rustige duurloop.
-function laatsteWeek(trainingen, profiel, b) {
-  const doelTijd = profiel.doelSeconden;
-  const kmh = doelTijd ? rondSnelheid(10 / (doelTijd / 3600)) : b.z.tempo10.van;
+// Laatste week: de doelafstand valt op de doeldatum. Trainingen na de doeldatum vervallen; past het
+// niet, dan valt eerst een extra rustige loop weg, daarna de rustige duurloop.
+function laatsteWeek(trainingen, profiel, b, doelKm = 10, w = 11) {
+  // Bij een gegenereerd schema staat de doeltijd voor de doelafstand in doelAfstandSeconden.
+  const doelTijd = profiel.doelAfstandSeconden ?? profiel.doelSeconden;
+  const kmh = doelTijd ? rondSnelheid(doelKm / (doelTijd / 3600)) : b.z.tempo10.van;
+  const naam = String(doelKm).replace('.', ',');
   const race = {
-    id: 'w11-doel', datum: profiel.doelDatum, dag: DAGEN[(naarDatum(profiel.doelDatum).getUTCDay() + 6) % 7], doel: true,
-    ...training('doel', `10 km${doelTijd ? ' op doeltijd' : ''}`, [b.opAfstand('tempo', '10 km', kmh, 10000)], b),
+    id: `w${w}-doel`, datum: profiel.doelDatum, dag: DAGEN[(naarDatum(profiel.doelDatum).getUTCDay() + 6) % 7], doel: true,
+    ...training('doel', `${naam} km${doelTijd ? ' op doeltijd' : ''}`, [b.opAfstand('tempo', `${naam} km`, kmh, doelKm * 1000)], b),
   };
   const ervoor = trainingen.filter((t) => t.type !== 'lang' && t.datum < profiel.doelDatum);
   const volgorde = ['kwaliteit', 'rustig'];

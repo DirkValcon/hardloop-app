@@ -1,11 +1,12 @@
 // Scherm Profiel: je gegevens, je snelheden en het formulier om ze te wijzigen.
 import { formatTijd, parseTijd } from './tijd.js';
 import { datumTekst, vandaagIso, plusDagen } from './datum.js';
-import { haalbaarheidHtml, zonesHtml } from './zonesweergave.js';
-import { DAGEN, bewaarProfiel, extraWeken, vroegsteDoeldatum } from './profiel.js';
+import { haalbaarheidHtml, zonesHtml, doelHtml } from './zonesweergave.js';
+import { doelafstand } from './generator.js';
+import { DAGEN, bewaarProfiel, extraWeken, vroegsteDoeldatum, schemaWeken } from './profiel.js';
 import { effectiefProfiel, valideerWijziging, wijzigProfiel } from './instellingen.js';
 import { maandagVan } from './schema.js';
-import { korteDatum, kmh } from './opmaak.js';
+import { korteDatum, kmh, km } from './opmaak.js';
 import { berekenZones, EIGEN_ZONES } from './zones.js';
 
 const parseTijdVeilig = (tekst, standaard) => parseTijd(tekst ?? '') ?? standaard;
@@ -27,8 +28,12 @@ function overzichtHtml(profiel, vandaag, account = '') {
     <h1>Profiel</h1>
     <div class="kaart">
       <dl class="samenvatting" data-test="samenvatting">
+        ${p.schema ? `
+        <dt>Schema</dt><dd>${doelafstand(p.schema.doelKm).naam} in ${p.schema.weken} weken</dd>
+        <dt>Niveau bij start</dt><dd>${km(p.schema.maxKm)} km in ${formatTijd(p.schema.tempoSecPerKm)} /km</dd>
+        <dt>Doel</dt><dd>${p.doelAfstandSeconden ? `${doelafstand(p.schema.doelKm).naam} in ${formatTijd(p.doelAfstandSeconden)}` : 'Uitlopen'}</dd>` : `
         <dt>5 km-tijd</dt><dd>${formatTijd(p.vijfKmSeconden)}</dd>
-        <dt>Doel</dt><dd>${p.doelAfstand} km${p.doelSeconden ? ' in ' + formatTijd(p.doelSeconden) : ''}</dd>
+        <dt>Doel</dt><dd>${p.doelAfstand} km${p.doelSeconden ? ' in ' + formatTijd(p.doelSeconden) : ''}</dd>`}
         <dt>Doeldatum</dt><dd>${datumTekst(p.doelDatum)}</dd>
         <dt>Extra weken</dt><dd>${extra}</dd>
         <dt>Trainingsdagen</dt><dd>${p.trainingsdagen.join(', ')}</dd>
@@ -36,13 +41,14 @@ function overzichtHtml(profiel, vandaag, account = '') {
         <dt>Helling</dt><dd>${p.helling}%</dd>
       </dl>
       <button type="button" class="secundair breed" data-actie="wijzig">Wijzigen</button>
+      <button type="button" class="secundair breed" data-actie="nieuw-schema">Nieuw schema maken</button>
     </div>
     ${komendeWijzigingen(profiel, vandaag)}
     <h2>Je doel</h2>
-    ${haalbaarheidHtml(p.vijfKmSeconden, p.doelSeconden)}
+    ${p.schema ? doelHtml({ ...p.schema, doelSeconden: p.doelAfstandSeconden }) : haalbaarheidHtml(p.vijfKmSeconden, p.doelSeconden)}
     <h2>Je snelheden op de loopband</h2>
     <div class="kaart">${zonesHtml(p.vijfKmSeconden, p.doelSeconden, p.eigenSnelheden)}</div>
-    <p class="hint">Rustige snelheden komen uit je huidige 5 km-tijd, snelle uit je doeltijd. Eigen snelheden stel je in onder Wijzigen.</p>
+    <p class="hint">Rustige snelheden komen uit je huidige ${p.schema ? 'niveau' : '5 km-tijd'}, snelle uit je doeltijd. Eigen snelheden stel je in onder Wijzigen.</p>
     ${account}`;
 }
 
@@ -51,16 +57,18 @@ function formulierHtml(invoer, profiel, vandaag, fouten = {}) {
   const ongeldig = (v) => (fouten[v] ? 'aria-invalid="true"' : '');
   const datumGewijzigd = invoer.doelDatum !== profiel.doelDatum;
   const extra = datumGewijzigd && !valideerWijziging(profiel, { ...invoer, extraWekenKeuze: 'later' }, vandaag).doelDatum
-    ? extraWeken(vandaag, invoer.doelDatum) : 0;
+    ? extraWeken(vandaag, invoer.doelDatum, schemaWeken(profiel)) : 0;
   return `
     <h1>Profiel wijzigen</h1>
     <form novalidate data-test="instellingen">
+      ${profiel.schema ? `<input type="hidden" name="vijfKmTijd" value="${invoer.vijfKmTijd}"><input type="hidden" name="doelTijd" value="${invoer.doelTijd}">
+      <p class="hint">Ander doel of niveau? Maak een nieuw schema via Profiel.</p>` : `
       <div class="veld"><label class="titel" for="vijfKmTijd">5 km-tijd (mm:ss)</label>
         <input type="text" inputmode="numeric" id="vijfKmTijd" name="vijfKmTijd" value="${invoer.vijfKmTijd}" ${ongeldig('vijfKmTijd')}>${fout('vijfKmTijd')}</div>
       <div class="veld"><label class="titel" for="doelTijd">Doeltijd 10 km (optioneel)</label>
-        <input type="text" inputmode="numeric" id="doelTijd" name="doelTijd" value="${invoer.doelTijd}" ${ongeldig('doelTijd')}>${fout('doelTijd')}</div>
+        <input type="text" inputmode="numeric" id="doelTijd" name="doelTijd" value="${invoer.doelTijd}" ${ongeldig('doelTijd')}>${fout('doelTijd')}</div>`}
       <div class="veld"><label class="titel" for="doelDatum">Doeldatum</label>
-        <input type="date" id="doelDatum" name="doelDatum" value="${invoer.doelDatum}" min="${vroegsteDoeldatum(vandaag)}" ${ongeldig('doelDatum')}>
+        <input type="date" id="doelDatum" name="doelDatum" value="${invoer.doelDatum}" min="${vroegsteDoeldatum(vandaag, schemaWeken(profiel))}" ${ongeldig('doelDatum')}>
         <div class="hint">Een andere doeldatum verschuift het hele schema.</div>${fout('doelDatum')}</div>
       ${extra > 0 ? `<fieldset class="veld keuzes" style="border:0;padding:0;margin:0 0 18px">
         <legend class="titel" style="margin-bottom:8px">Je hebt ${extra} ${extra === 1 ? 'week' : 'weken'} extra. Wat wil je daarmee?</legend>
@@ -95,10 +103,11 @@ function formulierHtml(invoer, profiel, vandaag, fouten = {}) {
     </form>`;
 }
 
-export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = localStorage, gewijzigd, account, uitloggen } = {}) {
+export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = localStorage, gewijzigd, account, uitloggen, nieuwSchema } = {}) {
   root.innerHTML = overzichtHtml(profiel, vandaag, account);
   root.onclick = (e) => {
     if (e.target.closest('[data-actie=wijzig]')) toonFormulier();
+    if (e.target.closest('[data-actie=nieuw-schema]')) nieuwSchema?.();
     if (e.target.closest('[data-actie=uitloggen]')) uitloggen?.();
   };
 
@@ -123,7 +132,7 @@ export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = 
       };
     };
     form.querySelector('#doelDatum').addEventListener('change', () => toonFormulier(lees()));
-    form.querySelector('[data-actie=annuleer]').addEventListener('click', () => toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd, account, uitloggen }));
+    form.querySelector('[data-actie=annuleer]').addEventListener('click', () => toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd, account, uitloggen, nieuwSchema }));
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const nieuw = lees();
@@ -132,7 +141,7 @@ export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = 
       profiel = wijzigProfiel(profiel, nieuw, vandaag);
       bewaarProfiel(opslag, profiel);
       gewijzigd?.(profiel);
-      toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd, account, uitloggen });
+      toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd, account, uitloggen, nieuwSchema });
     });
   }
 }

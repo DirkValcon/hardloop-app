@@ -36,9 +36,9 @@ export function verplaats(plan, aanpassingen, trainingId, naarDatum) {
   if (!week) throw new Error('Onbekende training');
   if (!zelfdeWeek(week, naarDatum)) throw new Error('Alleen binnen dezelfde week');
   const training = week.trainingen.find((t) => t.id === trainingId);
-  if (training.type === 'doel') throw new Error('De 10 km blijft op je doeldatum');
+  if (training.type === 'doel') throw new Error('De doelloop blijft op je doeldatum');
   const andere = week.trainingen.find((t) => t.datum === naarDatum && t.id !== trainingId);
-  if (andere?.type === 'doel') throw new Error('Op je doeldatum staat de 10 km');
+  if (andere?.type === 'doel') throw new Error('Op je doeldatum staat je doelloop');
   const verplaatst = { ...aanpassingen.verplaatst, [trainingId]: naarDatum };
   if (andere) verplaatst[andere.id] = training.datum;
   const vrij = aanpassingen.vrij.filter((d) => d !== naarDatum);

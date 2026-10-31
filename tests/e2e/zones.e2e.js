@@ -26,14 +26,14 @@ import { opzet, DIRK } from './helpers.js';
   const { page, url, fouten, shot, sluit } = await opzet();
   try {
     await page.goto(url);
-    await page.fill('#vijfKmTijd', '35:00');
+    await page.fill('#maxKm', '5');
+    await page.fill('#tempo', '7:00');
     await page.getByRole('button', { name: 'Volgende' }).click();
+    await page.getByText('10 km', { exact: true }).click();
     const feedback = page.locator('[data-test=haalbaarheid]');
-    assert.equal(await feedback.getAttribute('data-niveau'), 'geen');
-    assert.match(await feedback.textContent(), /1:12:58.*1:11:30/);
-    await page.getByRole('button', { name: 'Gebruik 1:11:30' }).click();
-    assert.equal(await page.inputValue('#doelTijd'), '1:11:30');
-    assert.equal(await feedback.getAttribute('data-niveau'), 'ambitieus');
+    // Leeg = uitlopen, met de voorspelde tijd op je huidige niveau.
+    assert.equal(await feedback.getAttribute('data-niveau'), 'uitlopen');
+    assert.match(await feedback.textContent(), /10 km uitlopen.*1:12:58/);
     await page.fill('#doelTijd', '65:00');
     assert.equal(await feedback.getAttribute('data-niveau'), 'te-snel');
     await shot('story2-te-snel');

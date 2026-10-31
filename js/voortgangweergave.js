@@ -68,11 +68,11 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
     <div class="kaart">
       <dl class="samenvatting">
         <dt>Langste loop</dt><dd data-test="langste">${v.langste ? `${km(v.langste.afstandKm)} km <small class="hint">${korteDatum(v.langste.datum)}</small>` : 'nog geen'}</dd>
-        <dt>Voorspelde 10 km</dt><dd data-test="voorspeld">${formatTijd(v.voorspeld10km)}${doel}</dd>
+        <dt>Voorspelde ${v.doelNaam}</dt><dd data-test="voorspeld">${formatTijd(v.voorspeldDoel)}${doel}</dd>
         <dt>Doeldatum</dt><dd>${datumTekst(plan.doelDatum)}</dd>
         ${v.overgeslagen ? `<dt>Overgeslagen</dt><dd>${v.overgeslagen}</dd>` : ''}
       </dl>
-      <p class="hint">De voorspelling komt uit je 5 km-tijd. Liep je een nieuwe 5 km-tijd? Pas hem aan onder Profiel.</p>
+      <p class="hint">${profiel.schema ? 'De voorspelling komt uit je huidige niveau (maximale afstand en tempo).' : 'De voorspelling komt uit je 5 km-tijd. Liep je een nieuwe 5 km-tijd? Pas hem aan onder Profiel.'}</p>
     </div>`;
 
   root.onclick = (e) => {

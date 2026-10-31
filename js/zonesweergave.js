@@ -1,6 +1,7 @@
 // Weergave van zones en de beoordeling van de doeltijd, gedeeld door onboarding en overzicht.
 import { formatTijd } from './tijd.js';
 import { tempoPerKm, beoordeelDoeltijd, berekenZones } from './zones.js';
+import { doelafstand, beoordeelDoel } from './generator.js';
 
 const kmh = (v) => v.toFixed(1).replace('.', ',');
 const tempo = (v) => formatTijd(tempoPerKm(v));
@@ -26,4 +27,20 @@ export function zonesHtml(vijfKmSeconden, doelSeconden, eigen = {}) {
         <small>${z.van === z.tot ? tempo(z.van) : `${tempo(z.van)}–${tempo(z.tot)}`} /km</small></td>
     </tr>`).join('');
   return `<table class="zones" data-test="zones"><tbody>${rijen}</tbody></table>`;
+}
+
+// Doel van een eigen schema: doeltijd tegen je huidige niveau, of uitlopen.
+export function doelHtml({ maxKm, tempoSecPerKm, doelKm, doelSeconden }) {
+  const d = doelafstand(doelKm);
+  const b = beoordeelDoel({ maxKm, tempoSecPerKm, doelKm, doelSeconden });
+  const voorspeld = formatTijd(b.voorspeld);
+  const procent = b.sneller != null ? Math.round(b.sneller * 100) : 0;
+  const tekst = {
+    uitlopen: `Je doel: de ${d.naam} uitlopen. Op je huidige niveau zou dat ongeveer ${voorspeld} zijn; na het schema waarschijnlijk sneller.`,
+    haalbaar: `Haalbaar: op je huidige niveau loop je de ${d.naam} al in ongeveer ${voorspeld}.`,
+    ambitieus: `Ambitieus maar haalbaar: ${procent}% sneller dan je voorspelde ${voorspeld}.`,
+    'te-snel': `Erg ambitieus: ${procent}% sneller dan je voorspelde ${voorspeld}. De snelle trainingen worden begrensd, zodat ze haalbaar blijven.`,
+  }[b.niveau];
+  const niveau = b.niveau === 'uitlopen' ? 'geen' : b.niveau;
+  return `<div class="melding melding-${niveau}" data-test="haalbaarheid" data-niveau="${b.niveau}">${tekst}</div>`;
 }
