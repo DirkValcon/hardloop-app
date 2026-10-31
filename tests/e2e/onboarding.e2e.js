@@ -88,7 +88,7 @@ try {
   await page.getByRole('link', { name: 'Profiel' }).click();
   const controleer = async () => {
     const tekst = await page.textContent('[data-test=samenvatting]');
-    for (const verwacht of ['10 km in 11 weken', '5 km in 7:00 /km', '10 km in 1:10:00', '5 maart 2027', '7 weken basisweken ervoor', 'di, do, zo', '80 kg', '1%']) {
+    for (const verwacht of ['10 km in 11 weken', '5 km in 7:00 /km', '10 km in 1:10:00', '5 maart 2027', '7 basisweken vooraf', 'di, do, zo', '80 kg', '1%']) {
       assert.ok(tekst.includes(verwacht), `samenvatting mist "${verwacht}": ${tekst}`);
     }
   };

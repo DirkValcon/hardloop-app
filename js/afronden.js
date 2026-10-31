@@ -10,7 +10,8 @@ const getal = (v) => Number(String(v).replace(',', '.'));
 // achter "Aanpassen". Zonder samenvatting (afvinken zonder app) staan de velden meteen open.
 export function afrondFormulier({ afstandKm, duurSec, kcal }, fouten = {}, { samenvatting = null } = {}) {
   const fout = (v) => (fouten[v] ? `<div class="foutmelding" role="alert">${fouten[v]}</div>` : '');
-  const open = !samenvatting || Object.keys(fouten).length;
+  // Telde de app geen afstand (alles overgeslagen), dan meteen de velden tonen om die in te vullen.
+  const open = !samenvatting || Object.keys(fouten).length || !(afstandKm > 0);
   return `
     <form class="afronden" novalidate data-test="afronden">
       ${samenvatting ? `
