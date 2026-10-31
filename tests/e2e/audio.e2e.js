@@ -1,6 +1,6 @@
 // Browsertest verbeteringen 2 en 3: gesproken kilometertijden en aankondigingen, snelheid aanpassen.
 import assert from 'node:assert/strict';
-import { opzet, DIRK } from './helpers.js';
+import { opzet, DIRK, houdStopIngedrukt } from './helpers.js';
 
 // Dinsdag 3 november: rustige duurloop 4 km.
 const { page, url, fouten, shot, sluit } = await opzet({ vandaag: '2026-11-03', profiel: { ...DIRK, doelDatum: '2027-01-17' }, klokLoopt: true });
@@ -62,8 +62,7 @@ try {
   assert.ok(aantal > 2);
 
   // Stoppen: afstand en duur uit de app komen in het formulier.
-  page.once('dialog', (d) => d.accept());
-  await page.getByRole('button', { name: 'Stop' }).click();
+  await houdStopIngedrukt(page);
   await page.waitForSelector('[data-test=afronden]');
   const opgeslagen = parseFloat((await page.inputValue('#afstandKm')).replace(',', '.'));
   assert.ok(Math.abs(opgeslagen - afstandNa) < 0.15, `${opgeslagen} vs ${afstandNa}`);

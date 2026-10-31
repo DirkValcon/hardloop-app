@@ -40,3 +40,4 @@ npm run serve     # lokaal bekijken op http://127.0.0.1:8080/
 | 13 | Gegevens synchroniseren tussen apparaten | klaar |
 | 14 | Nieuw schema voor 5 km, 10 km, halve of hele marathon | klaar |
 | 15 | Nieuwe, vriendelijke stijl (licht en donker, kleur per trainingstype) | klaar |
+| 18 | Loopscherm: Stop vasthouden, grote Pauze, blok overslaan ongedaan maken, alles in beeld | klaar |

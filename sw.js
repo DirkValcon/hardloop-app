@@ -7,7 +7,7 @@ const BESTANDEN = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'vendor/supabase.js',
   'js/app.js', 'js/account.js', 'js/afronden.js', 'js/aanpassingen.js', 'js/calorieen.js', 'js/config.js', 'js/datum.js', 'js/generator.js', 'js/instellingen.js',
-  'js/loopscherm.js', 'js/onboarding.js', 'js/opgeslagen.js', 'js/opmaak.js', 'js/overzicht.js', 'js/plan.js', 'js/profiel.js',
+  'js/loopscherm.js', 'js/melding.js', 'js/onboarding.js', 'js/opgeslagen.js', 'js/opmaak.js', 'js/overzicht.js', 'js/plan.js', 'js/profiel.js',
   'js/resultaten.js', 'js/schema.js', 'js/schemaweergave.js', 'js/speler.js', 'js/sync.js', 'js/tijd.js', 'js/vandaag.js',
   'js/voortgang.js', 'js/voortgangweergave.js', 'js/zones.js', 'js/zonesweergave.js',
 ];

@@ -1,6 +1,6 @@
 // Browsertest story 7: training afvinken, afstand van de loopband invullen, overslaan en gemiste trainingen.
 import assert from 'node:assert/strict';
-import { opzet, DIRK } from './helpers.js';
+import { opzet, DIRK, houdStopIngedrukt } from './helpers.js';
 
 const profiel = { ...DIRK, doelDatum: '2027-01-17' };
 const tekst = async (page, sel) => (await page.textContent(sel)).replace(/\s+/g, ' ').trim();
@@ -13,8 +13,7 @@ const tekst = async (page, sel) => (await page.textContent(sel)).replace(/\s+/g,
     await page.getByRole('button', { name: 'Start op loopband' }).click();
     await page.getByRole('button', { name: 'Start', exact: true }).click();
     await page.clock.runFor(20 * 60_000);
-    page.once('dialog', (d) => d.accept());
-    await page.getByRole('button', { name: 'Stop' }).click();
+    await houdStopIngedrukt(page);
     await page.waitForSelector('[data-test=afronden]');
     assert.match(await tekst(page, '[data-test=klaar]'), /gestopt na 20 min/);
     assert.equal(await page.inputValue('#duurMin'), '20');
