@@ -9,7 +9,7 @@ import { huidigPlan } from './plan.js';
 import { vandaagIso } from './datum.js';
 import { afrondFormulier, koppelAfronden } from './afronden.js';
 import { kcalTraining } from './calorieen.js';
-import { huidigeGebruiker, toonInloggen, accountHtml, uitloggen, accountGegevens } from './account.js';
+import { huidigeGebruiker, toonInloggen, accountHtml, syncStatusHtml, uitloggen, accountGegevens } from './account.js';
 import { synchroniseer, isEersteKeer, noteerWijziging, wisLokaal } from './sync.js';
 import { OPGESLAGEN } from './opgeslagen.js';
 import { maakOngedaan } from './resultaten.js';
@@ -26,7 +26,7 @@ const TABS = [
   { id: 'voortgang', naam: 'Voortgang', toon: toonVoortgang,
     icoon: '<path d="M5 20V12M12 20V5M19 20v-9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>' },
   { id: 'profiel', naam: 'Profiel',
-    toon: (r, p) => toonOverzicht(r, p, { account: accountHtml(gebruiker), uitloggen: afmelden, nieuwSchema: () => toonNieuwSchema(p) }),
+    toon: (r, p) => toonOverzicht(r, p, { account: () => accountHtml(gebruiker, syncStatus), uitloggen: afmelden, nieuwSchema: () => toonNieuwSchema(p) }),
     icoon: '<circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>' },
 ];
 
@@ -105,12 +105,21 @@ function toonTab(profiel) {
 }
 
 // Synchroniseren mag nooit de app blokkeren: zonder internet proberen we het later opnieuw.
+// De stand is te zien onder Profiel (bijgewerkt, bezig, offline of mislukt).
 let bezig = null;
+let syncStatus = { stand: 'bezig' };
+function zetSyncStatus(stand) {
+  syncStatus = { stand, om: new Date() };
+  const el = document.querySelector('[data-test=syncstatus]');
+  if (el) el.outerHTML = syncStatusHtml(syncStatus);
+}
 async function sync() {
   if (!gebruiker) return false;
   if (bezig) return bezig;
+  zetSyncStatus('bezig');
   bezig = synchroniseer(localStorage, accountGegevens(gebruiker.id), gebruiker.id)
-    .catch(() => false)
+    .then((veranderd) => { zetSyncStatus('bijgewerkt'); return veranderd; })
+    .catch(() => { zetSyncStatus(navigator.onLine ? 'mislukt' : 'offline'); return false; })
     .finally(() => { bezig = null; });
   return bezig;
 }
@@ -156,6 +165,7 @@ export async function start() {
 window.addEventListener('hashchange', () => { if (gebruiker && laadProfiel(localStorage)) start(); });
 window.addEventListener(OPGESLAGEN, (e) => { noteerWijziging(localStorage, e.detail); syncStraks(); });
 window.addEventListener('online', syncStraks);
+window.addEventListener('offline', () => zetSyncStatus('offline'));
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncStraks(); });
 start();
 

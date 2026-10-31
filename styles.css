@@ -439,3 +439,11 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
 .deze-week .voortgangsbalk { height: 12px; border-radius: 6px; margin: 10px 0 8px; }
 .deze-week .voortgangsbalk span { background: var(--rustig); border-radius: 6px; }
 .tegels + .kaart { margin-top: 10px; }
+
+/* ---------- Synchronisatiestatus (story 24) ---------- */
+.syncstatus { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: var(--zacht); margin: 10px 0 4px; }
+.sync-icoon { width: 10px; height: 10px; border-radius: 50%; flex: none; margin-top: 6px; background: var(--zacht); }
+.syncstatus.is-bijgewerkt .sync-icoon { background: var(--rustig); }
+.syncstatus.is-offline .sync-icoon, .syncstatus.is-mislukt .sync-icoon { background: var(--doel); }
+.syncstatus.is-bezig .sync-icoon { animation: knipper 1s infinite alternate; }
+@keyframes knipper { to { opacity: .3; } }

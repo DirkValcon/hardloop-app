@@ -8,6 +8,7 @@ import { effectiefProfiel, valideerWijziging, wijzigProfiel } from './instelling
 import { maandagVan } from './schema.js';
 import { korteDatum, kmh, km } from './opmaak.js';
 import { berekenZones, EIGEN_ZONES } from './zones.js';
+import { toonMelding } from './melding.js';
 
 const parseTijdVeilig = (tekst, standaard) => parseTijd(tekst ?? '') ?? standaard;
 
@@ -68,7 +69,7 @@ function overzichtHtml(profiel, vandaag, account = '') {
       <button type="button" class="secundair breed" data-actie="wijzig" data-sectie="instellingen">Instellingen wijzigen</button>
     </div>
     </div>
-    ${account}`;
+    ${typeof account === 'function' ? account() : account}`;
 }
 
 const TITELS = { schema: 'Schema wijzigen', snelheden: 'Snelheden aanpassen', instellingen: 'Instellingen wijzigen' };
@@ -173,6 +174,7 @@ export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = 
       profiel = wijzigProfiel(profiel, nieuw, vandaag);
       bewaarProfiel(opslag, profiel);
       gewijzigd?.(profiel);
+      toonMelding('Opgeslagen', { duurMs: 2500 });
       toonOverzicht(root, profiel, { vandaag, opslag, gewijzigd, account, uitloggen, nieuwSchema });
     });
   }

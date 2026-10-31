@@ -95,12 +95,26 @@ export function toonInloggen(root) {
   };
 }
 
-export function accountHtml(gebruiker) {
+const TIJD = (d) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+// Klein statusregeltje: staat alles al in je account?
+export function syncStatusHtml(status = { stand: 'bezig' }) {
+  const tekst = {
+    bijgewerkt: `Alles is bewaard in je account${status.om ? ` (${TIJD(status.om)})` : ''}.`,
+    bezig: 'Bezig met synchroniseren…',
+    offline: 'Geen internet. Je wijzigingen staan veilig op dit apparaat en gaan naar je account zodra je weer online bent.',
+    mislukt: 'Synchroniseren lukte niet. Je wijzigingen staan op dit apparaat; de app probeert het later opnieuw.',
+  }[status.stand];
+  return `<p class="syncstatus is-${status.stand}" data-test="syncstatus" data-stand="${status.stand}" role="status"><span class="sync-icoon" aria-hidden="true"></span>${tekst}</p>`;
+}
+
+export function accountHtml(gebruiker, status) {
   if (!gebruiker) return '';
   return `
     <h2>Account</h2>
     <div class="kaart">
       <p class="account-email" data-test="account">Ingelogd als <strong>${gebruiker.email ?? 'onbekend'}</strong></p>
+      ${syncStatusHtml(status)}
       <button type="button" class="secundair breed" data-actie="uitloggen">Uitloggen</button>
     </div>`;
 }
