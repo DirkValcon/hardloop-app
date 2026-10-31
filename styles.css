@@ -222,3 +222,9 @@ button.google svg { width: 20px; height: 20px; }
 .gelopen li { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--lijn); }
 .gelopen li:first-child { border-top: 0; }
 .gelopen small { display: block; color: var(--zacht); font-size: 13px; }
+
+/* Tempo en snelheid naast elkaar: vul er één in, de ander wordt uitgerekend. */
+.tempo-paar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tempo-paar label { display: flex; align-items: center; gap: 8px; }
+.tempo-paar input { min-width: 0; flex: 1; }
+.tempo-paar span { color: var(--zacht, #8a8f98); font-size: 0.9em; white-space: nowrap; }

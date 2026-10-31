@@ -76,7 +76,7 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
 
   if (!volgende) {
     root.innerHTML = `<h1>Vandaag</h1>${gemistHtml(gemist, deWeek ?? plan.weken.at(-1), vandaag)}${gedaanHtml}
-      <div class="kaart"><p>Je schema zit erop. Gefeliciteerd met je 10 km!</p></div>`;
+      <div class="kaart"><p>Je schema zit erop. Gefeliciteerd met je ${plan.doelNaam}!</p></div>`;
     return;
   }
   const { training: t, week, isVandaag } = volgende;
@@ -112,5 +112,5 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
         <button type="button" class="secundair" data-overslaan="${t.id}">Overslaan</button>
       </div>` : ''}
     </article>
-    <p class="hint" data-test="tot-doel">Nog ${totDoel} ${totDoel === 1 ? 'dag' : 'dagen'} tot je 10 km op ${datumTekst(plan.doelDatum)}.</p>`;
+    <p class="hint" data-test="tot-doel">Nog ${totDoel} ${totDoel === 1 ? 'dag' : 'dagen'} tot je ${plan.doelNaam} op ${datumTekst(plan.doelDatum)}.</p>`;
 }

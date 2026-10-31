@@ -1,7 +1,7 @@
 // Service worker: de app werkt ook zonder internet (bijvoorbeeld in de sportschool).
 // Eerst van internet (altijd de nieuwste versie, nooit oude en nieuwe bestanden door elkaar),
 // zonder of met traag internet uit de cache. Verhoog VERSIE bij een nieuwe release.
-const VERSIE = 'loopschema-v8';
+const VERSIE = 'loopschema-v9';
 const WACHTTIJD_MS = 4000;
 const BESTANDEN = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',

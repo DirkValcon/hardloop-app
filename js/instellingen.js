@@ -4,7 +4,7 @@
 // - gewicht geldt meteen (alleen voor de calorieschatting);
 // - een andere doeldatum verschuift het hele schema.
 // Zolang het schema nog niet begonnen is, wordt alles meteen in het profiel zelf gezet.
-import { valideerVeld, extraWeken, DAGEN } from './profiel.js';
+import { valideerVeld, extraWeken, DAGEN, schemaWeken } from './profiel.js';
 import { parseTijd } from './tijd.js';
 import { maandagVan, profielVoorWeek, maakPlan } from './schema.js';
 import { plusDagen } from './datum.js';
@@ -30,7 +30,9 @@ export function leesEigenSnelheden(invoer) {
 }
 
 export function valideerWijziging(profiel, invoer, vandaag) {
-  const velden = ['vijfKmTijd', 'doelTijd', 'trainingsdagen', 'gewicht', 'helling'];
+  invoer = { ...invoer, weken: schemaWeken(profiel), doelAfstand: 10 };
+  // Bij een eigen schema horen niveau en doeltijd bij het schema: die wijzig je met een nieuw schema.
+  const velden = [...(profiel.schema ? [] : ['vijfKmTijd', 'doelTijd']), 'trainingsdagen', 'gewicht', 'helling'];
   if (invoer.doelDatum !== profiel.doelDatum) velden.push('doelDatum', 'extraWekenKeuze');
   const fouten = {};
   for (const v of velden) {
@@ -45,9 +47,10 @@ export function valideerWijziging(profiel, invoer, vandaag) {
 }
 
 export function wijzigProfiel(profiel, invoer, vandaag) {
+  const huidig = effectiefProfiel(profiel, vandaag);
   const nieuw = {
-    vijfKmSeconden: parseTijd(invoer.vijfKmTijd),
-    doelSeconden: invoer.doelTijd ? parseTijd(invoer.doelTijd) : null,
+    vijfKmSeconden: profiel.schema ? huidig.vijfKmSeconden : parseTijd(invoer.vijfKmTijd),
+    doelSeconden: profiel.schema ? huidig.doelSeconden : invoer.doelTijd ? parseTijd(invoer.doelTijd) : null,
     helling: Number(invoer.helling),
     trainingsdagen: DAGEN.filter((d) => invoer.trainingsdagen.includes(d)),
     eigenSnelheden: leesEigenSnelheden(invoer),
@@ -55,7 +58,7 @@ export function wijzigProfiel(profiel, invoer, vandaag) {
   let resultaat = { ...profiel, gewicht: Number(invoer.gewicht) };
 
   if (invoer.doelDatum !== profiel.doelDatum) {
-    const extra = extraWeken(vandaag, invoer.doelDatum);
+    const extra = extraWeken(vandaag, invoer.doelDatum, schemaWeken(profiel));
     resultaat = { ...resultaat, doelDatum: invoer.doelDatum, extraWeken: extra, extraWekenKeuze: extra > 0 ? invoer.extraWekenKeuze : null };
   }
 

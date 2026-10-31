@@ -4,6 +4,7 @@
 import { DAGEN } from './profiel.js';
 import { berekenZones, rondSnelheid } from './zones.js';
 import { naarDatum, plusDagen, vandaagIso } from './datum.js';
+import { genereerSjabloon } from './generator.js';
 
 export const SJABLOON_5_10 = {
   id: '5-10',
@@ -133,7 +134,13 @@ export function profielVoorWeek(profiel, maandag) {
     .reduce((p, { vanaf, ...velden }) => ({ ...p, ...velden }), profiel);
 }
 
-export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagIso() } = {}) {
+// Een profiel met een eigen schema (doelafstand, niveau, weken) krijgt een gegenereerd sjabloon;
+// oudere profielen houden het vaste 5 → 10 km-schema.
+export function sjabloonVoor(profiel) {
+  return profiel.schema ? genereerSjabloon(profiel.schema) : SJABLOON_5_10;
+}
+
+export function maakPlan(profiel, { sjabloon = sjabloonVoor(profiel), vandaag = vandaagIso() } = {}) {
   const cache = new Map();
   const opWeek = (maandag) => {
     const p = profielVoorWeek(profiel, maandag);
@@ -213,7 +220,15 @@ export function maakPlan(profiel, { sjabloon = SJABLOON_5_10, vandaag = vandaagI
     });
   }
 
-  return { sjabloon: sjabloon.id, zones: opWeek(maandagVan(vandaag)).zones, weken, start: weken[0].maandag, doelDatum: profiel.doelDatum };
+  // Trainingen van een eigen schema krijgen het schema-id ervoor, zodat afgevinkte trainingen en
+  // aanpassingen van een vorig schema niet op het nieuwe terechtkomen.
+  const prefix = profiel.schema?.id ? `${profiel.schema.id}-` : '';
+  if (prefix) for (const w of weken) w.trainingen = w.trainingen.map((t) => ({ ...t, id: prefix + t.id }));
+  const doelKm = sjabloon.doelKm ?? 10;
+  return {
+    sjabloon: sjabloon.id, zones: opWeek(maandagVan(vandaag)).zones, weken, start: weken[0].maandag, doelDatum: profiel.doelDatum,
+    doelKm, doelNaam: sjabloon.doelNaam ?? `${doelKm} km`,
+  };
 }
 
 // Laatste week: de doelafstand valt op de doeldatum. Trainingen na de doeldatum vervallen; past het

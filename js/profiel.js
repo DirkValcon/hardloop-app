@@ -2,29 +2,36 @@
 import { parseTijd } from './tijd.js';
 import { dagenTussen, plusDagen } from './datum.js';
 import { meldOpgeslagen } from './opgeslagen.js';
+import { doelafstand, vijfKmUitNiveau, tienKmUitDoel, MIN_WEKEN, MAX_WEKEN } from './generator.js';
 
 export const SCHEMA_WEKEN = 11;
 export const DAGEN = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
 export const OPSLAG_SLEUTEL = 'hardloop-app.profiel.v1';
 
-// Vroegst mogelijke doeldatum: 11 volle weken vanaf vandaag.
-export function vroegsteDoeldatum(vandaag) {
-  return plusDagen(vandaag, SCHEMA_WEKEN * 7);
+// Aantal weken van het schema van dit profiel (het vaste schema duurt 11 weken).
+export const schemaWeken = (profiel) => profiel?.schema?.weken ?? SCHEMA_WEKEN;
+
+// Vroegst mogelijke doeldatum: het hele schema vanaf vandaag.
+export function vroegsteDoeldatum(vandaag, weken = SCHEMA_WEKEN) {
+  return plusDagen(vandaag, weken * 7);
 }
 
-// Aantal hele weken extra tussen vandaag en de start van het 11-wekenschema.
-export function extraWeken(vandaag, doeldatum) {
-  return Math.max(0, Math.floor((dagenTussen(vandaag, doeldatum) - SCHEMA_WEKEN * 7) / 7));
+// Aantal hele weken extra tussen vandaag en de start van het schema.
+export function extraWeken(vandaag, doeldatum, weken = SCHEMA_WEKEN) {
+  return Math.max(0, Math.floor((dagenTussen(vandaag, doeldatum) - weken * 7) / 7));
 }
 
 // Elke stap controleert alleen zijn eigen velden, zodat de onboarding per stap kan valideren.
 export const STAPPEN = [
-  ['vijfKmTijd'],
+  ['maxKm', 'tempo'],
   ['doelAfstand', 'doelTijd'],
-  ['doelDatum', 'extraWekenKeuze'],
+  ['weken', 'doelDatum', 'extraWekenKeuze'],
   ['trainingsdagen'],
   ['gewicht', 'helling'],
 ];
+
+export const getal = (v) => Number(String(v ?? '').trim().replace(',', '.'));
+const wekenVan = (invoer) => (invoer.weken ? Math.round(getal(invoer.weken)) : SCHEMA_WEKEN);
 
 export function valideerVeld(veld, invoer, vandaag) {
   switch (veld) {
@@ -34,25 +41,46 @@ export function valideerVeld(veld, invoer, vandaag) {
       if (s < 12 * 60 || s > 60 * 60) return 'Een 5 km-tijd ligt tussen 12:00 en 60:00.';
       return null;
     }
+    case 'maxKm': {
+      const km = getal(invoer.maxKm);
+      if (!String(invoer.maxKm ?? '').trim() || Number.isNaN(km)) return 'Vul in hoeveel km je nu maximaal achter elkaar loopt.';
+      if (km < 1 || km > 50) return 'Je maximale afstand ligt tussen 1 en 50 km.';
+      return null;
+    }
+    case 'tempo': {
+      const s = parseTijd(invoer.tempo ?? '');
+      if (s === null) return 'Vul je tempo in als min:ss per km, bijvoorbeeld 7:00.';
+      if (s < 150 || s > 15 * 60) return 'Een tempo ligt tussen 2:30 en 15:00 per km.';
+      return null;
+    }
     case 'doelAfstand':
-      return invoer.doelAfstand === 10 ? null : 'Kies een doel.';
+      return doelafstand(invoer.doelAfstand) ? null : 'Kies een doel.';
     case 'doelTijd': {
-      if (!invoer.doelTijd) return null; // optioneel
+      if (!invoer.doelTijd) return null; // optioneel: leeg = uitlopen
       const s = parseTijd(invoer.doelTijd);
+      const d = doelafstand(invoer.doelAfstand) ?? doelafstand(10);
       if (s === null) return 'Vul je doeltijd in als mm:ss of u:mm:ss, bijvoorbeeld 70:00.';
-      if (s < 25 * 60 || s > 2 * 3600) return 'Een 10 km-doeltijd ligt tussen 25:00 en 2:00:00.';
+      // Tussen 2:30 en 12:00 per km (voor 10 km: 25:00 tot 2:00:00).
+      const [min, max] = [d.km * 150, d.km * 720].map((x) => Math.round(x / 60) * 60);
+      if (s < min || s > max) return `Een ${d.naam}-doeltijd ligt tussen ${tijdTekst(min)} en ${tijdTekst(max)}.`;
+      return null;
+    }
+    case 'weken': {
+      const w = getal(invoer.weken);
+      if (!Number.isInteger(w) || w < MIN_WEKEN || w > MAX_WEKEN) return `Kies ${MIN_WEKEN} tot ${MAX_WEKEN} weken.`;
       return null;
     }
     case 'doelDatum': {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(invoer.doelDatum ?? '')) return 'Kies een doeldatum.';
-      if (dagenTussen(vandaag, invoer.doelDatum) < SCHEMA_WEKEN * 7) {
-        return 'Het schema duurt 11 weken: kies een datum die minstens 11 weken vooruit ligt.';
+      const weken = wekenVan(invoer);
+      if (dagenTussen(vandaag, invoer.doelDatum) < weken * 7) {
+        return `Het schema duurt ${weken} weken: kies een datum die minstens ${weken} weken vooruit ligt.`;
       }
       return null;
     }
     case 'extraWekenKeuze': {
       if (valideerVeld('doelDatum', invoer, vandaag)) return null;
-      if (extraWeken(vandaag, invoer.doelDatum) === 0) return null;
+      if (extraWeken(vandaag, invoer.doelDatum, wekenVan(invoer)) === 0) return null;
       return ['later', 'basis'].includes(invoer.extraWekenKeuze)
         ? null : 'Kies wat je met de extra weken wilt doen.';
     }
@@ -87,16 +115,25 @@ export function valideerStap(stap, invoer, vandaag) {
   return fouten;
 }
 
-export function valideerProfiel(invoer, vandaag) {
+// Een nieuw, gegenereerd schema. De 5 km-tijd en de 10 km-doeltijd worden afgeleid, zodat de
+// tempozones hetzelfde blijven rekenen als bij het vaste schema.
+export function valideerProfiel(invoer, vandaag, { schemaId = `s${Date.now().toString(36)}` } = {}) {
   const fouten = Object.assign({}, ...STAPPEN.map((_, i) => valideerStap(i, invoer, vandaag)));
   if (Object.keys(fouten).length) return { ok: false, fouten };
-  const extra = extraWeken(vandaag, invoer.doelDatum);
+  const weken = wekenVan(invoer);
+  const extra = extraWeken(vandaag, invoer.doelDatum, weken);
+  const maxKm = getal(invoer.maxKm);
+  const tempoSecPerKm = parseTijd(invoer.tempo);
+  const doelKm = doelafstand(invoer.doelAfstand).km;
+  const doelAfstandSeconden = invoer.doelTijd ? parseTijd(invoer.doelTijd) : null;
   return {
     ok: true,
     profiel: {
-      vijfKmSeconden: parseTijd(invoer.vijfKmTijd),
-      doelAfstand: 10,
-      doelSeconden: invoer.doelTijd ? parseTijd(invoer.doelTijd) : null,
+      schema: { id: schemaId, doelKm, maxKm, tempoSecPerKm, weken },
+      vijfKmSeconden: vijfKmUitNiveau(maxKm, tempoSecPerKm),
+      doelAfstand: doelKm,
+      doelAfstandSeconden,
+      doelSeconden: tienKmUitDoel(doelKm, doelAfstandSeconden),
       doelDatum: invoer.doelDatum,
       extraWeken: extra,
       extraWekenKeuze: extra > 0 ? invoer.extraWekenKeuze : null,
@@ -106,6 +143,12 @@ export function valideerProfiel(invoer, vandaag) {
       aangemaaktOp: vandaag,
     },
   };
+}
+
+function tijdTekst(s) {
+  const u = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return u ? `${u}:${String(m).padStart(2, '0')}:00` : `${m}:00`;
 }
 
 export function laadProfiel(opslag) {

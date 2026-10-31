@@ -4,7 +4,7 @@ import { valideerProfiel, valideerStap, laadProfiel, bewaarProfiel, extraWeken, 
 
 const VANDAAG = '2026-10-30';
 const geldig = {
-  vijfKmTijd: '35:00', doelAfstand: 10, doelTijd: '70:00', doelDatum: '2027-01-15',
+  maxKm: '5', tempo: '7:00', doelAfstand: 10, doelTijd: '70:00', weken: '11', doelDatum: '2027-01-15',
   extraWekenKeuze: null, trainingsdagen: ['zo', 'di', 'do'], gewicht: '80', helling: '1',
 };
 
@@ -15,10 +15,12 @@ class GeheugenOpslag {
 }
 
 test('geldig profiel van Dirk wordt geaccepteerd en genormaliseerd', () => {
-  const r = valideerProfiel(geldig, VANDAAG);
+  const r = valideerProfiel(geldig, VANDAAG, { schemaId: 'sx' });
   assert.equal(r.ok, true, JSON.stringify(r.fouten));
-  assert.equal(r.profiel.vijfKmSeconden, 2100);
+  assert.deepEqual(r.profiel.schema, { id: 'sx', doelKm: 10, maxKm: 5, tempoSecPerKm: 420, weken: 11 });
+  assert.equal(r.profiel.vijfKmSeconden, 2100); // 5 km in 7:00/km
   assert.equal(r.profiel.doelSeconden, 4200);
+  assert.equal(r.profiel.doelAfstandSeconden, 4200);
   assert.deepEqual(r.profiel.trainingsdagen, ['di', 'do', 'zo']); // in weekvolgorde
   assert.equal(r.profiel.gewicht, 80);
   assert.equal(r.profiel.helling, 1);
@@ -28,12 +30,29 @@ test('doeltijd is optioneel', () => {
   const r = valideerProfiel({ ...geldig, doelTijd: '' }, VANDAAG);
   assert.equal(r.ok, true);
   assert.equal(r.profiel.doelSeconden, null);
+  assert.equal(r.profiel.doelAfstandSeconden, null);
 });
 
-test('5 km-tijd moet mm:ss zijn en realistisch', () => {
-  for (const t of ['', '35', 'snel', '35:99', '9:00', '75:00']) {
-    assert.ok(valideerStap(0, { ...geldig, vijfKmTijd: t }, VANDAAG).vijfKmTijd, t);
+test('halve marathon: doeltijd wordt omgerekend naar 10 km voor de snelheden', () => {
+  const r = valideerProfiel({ ...geldig, doelAfstand: '21.1', doelTijd: '2:30:00', weken: '12', doelDatum: '2027-01-22' }, VANDAAG);
+  assert.equal(r.ok, true, JSON.stringify(r.fouten));
+  assert.equal(r.profiel.doelAfstand, 21.1);
+  assert.equal(r.profiel.doelAfstandSeconden, 9000);
+  assert.ok(r.profiel.doelSeconden > 4000 && r.profiel.doelSeconden < 4300);
+  assert.match(valideerStap(1, { ...geldig, doelAfstand: '21.1', doelTijd: '50:00' }, VANDAAG).doelTijd, /Halve marathon-doeltijd ligt tussen 53:00 en 4:13:00/);
+});
+
+test('huidig niveau: afstand en tempo moeten kloppen', () => {
+  for (const km of ['', 'ver', '0,5', '60']) assert.ok(valideerStap(0, { ...geldig, maxKm: km }, VANDAAG).maxKm, km);
+  assert.deepEqual(valideerStap(0, { ...geldig, maxKm: '7,5' }, VANDAAG), {});
+  for (const t of ['', '7', 'snel', '7:99', '2:00', '16:00']) {
+    assert.ok(valideerStap(0, { ...geldig, tempo: t }, VANDAAG).tempo, t);
   }
+});
+
+test('aantal weken tussen 4 en 52', () => {
+  for (const w of ['', '3', '53', '8,5']) assert.ok(valideerStap(2, { ...geldig, weken: w }, VANDAAG).weken, w);
+  assert.equal(valideerStap(2, { ...geldig, weken: '8', doelDatum: '2026-12-25' }, VANDAAG).weken, undefined);
 });
 
 test('minder dan 3 of meer dan 5 dagen wordt geweigerd', () => {
@@ -75,7 +94,7 @@ test('gewicht en helling binnen grenzen', () => {
 test('profiel blijft bewaard na opslaan en laden', () => {
   const opslag = new GeheugenOpslag();
   assert.equal(laadProfiel(opslag), null);
-  const { profiel } = valideerProfiel(geldig, VANDAAG);
+  const { profiel } = valideerProfiel(geldig, VANDAAG, { schemaId: 'sx' });
   bewaarProfiel(opslag, profiel);
   assert.deepEqual(laadProfiel(opslag), profiel);
 });

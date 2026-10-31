@@ -29,7 +29,9 @@ export function berekenVoortgang(plan, resultaten, profiel, vandaag) {
     totaal: alle.length,
     langste: langste ? { naam: langste.naam, afstandKm: resultaten[langste.id].afstandKm, datum: resultaten[langste.id].datum } : null,
     voorspeld10km: voorspelTijd(profiel.vijfKmSeconden, 5, 10),
-    doelSeconden: profiel.doelSeconden,
+    voorspeldDoel: voorspelTijd(profiel.vijfKmSeconden, 5, plan.doelKm ?? 10),
+    doelNaam: plan.doelNaam ?? '10 km',
+    doelSeconden: profiel.schema ? profiel.doelAfstandSeconden : profiel.doelSeconden,
     dagenTotDoel: dagen,
     wekenTotDoel: Math.ceil(dagen / 7),
     ...statistieken(plan, resultaten, vandaag),
@@ -44,7 +46,7 @@ export function statistieken(plan, resultaten, vandaag) {
   const namen = new Map(plan.weken.flatMap((w) => w.trainingen).map((t) => [t.id, t.naam]));
   const gelopen = Object.entries(resultaten)
     .filter(([, r]) => r.status === 'gedaan')
-    .map(([id, r]) => ({ id, naam: namen.get(id) ?? 'Training', datum: r.datum, afstandKm: r.afstandKm, duurSec: r.duurSec, kcal: r.kcal }))
+    .map(([id, r]) => ({ id, naam: namen.get(id) ?? r.naam ?? 'Training', datum: r.datum, afstandKm: r.afstandKm, duurSec: r.duurSec, kcal: r.kcal }))
     .sort((a, b) => b.datum.localeCompare(a.datum) || a.id.localeCompare(b.id));
 
   const maandag = maandagVan(vandaag);

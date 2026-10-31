@@ -11,6 +11,11 @@ import { laadResultaten, maakOngedaan } from './resultaten.js';
 const DAGNAAM = { ma: 'Ma', di: 'Di', wo: 'Wo', do: 'Do', vr: 'Vr', za: 'Za', zo: 'Zo' };
 const TYPE = { rustig: 'Rustig', kwaliteit: 'Kwaliteit', lang: 'Lang', doel: 'Doel' };
 const BADGE = { herstel: 'Herstelweek', taper: 'Laatste week', basis: 'Basis' };
+// Taperweken vóór de laatste week heten "Rustiger aan".
+const badge = (w, laatste) => {
+  const naam = w.soort === 'taper' && !laatste ? 'Rustiger aan' : BADGE[w.soort];
+  return naam ? `<span class="badge badge-${w.soort}">${naam}</span>` : '';
+};
 const weekId = (w) => `${w.soort === 'basis' ? 'b' : ''}${w.nummer}`;
 
 function blokRegel(b) {
@@ -21,7 +26,7 @@ function blokRegel(b) {
 }
 
 function verplaatsHtml(t, week, vandaag) {
-  if (t.type === 'doel') return '<p class="hint">De 10 km staat vast op je doeldatum.</p>';
+  if (t.type === 'doel') return `<p class="hint">De ${t.naam.replace(/ op doeltijd$/, '')} staat vast op je doeldatum.</p>`;
   if (t.datum < vandaag) return '';
   const knoppen = DAGEN.map((d, i) => {
     const datum = plusDagen(week.maandag, i);
@@ -63,7 +68,7 @@ function trainingHtml(t, week, vandaag, gewicht, r) {
     </details>`;
 }
 
-function weekHtml(w, aanpassingen, vandaag, gewicht, huidig, resultaten) {
+function weekHtml(w, aanpassingen, vandaag, gewicht, huidig, resultaten, laatste = true) {
   const vrij = new Set(aanpassingen.vrij);
   const vrijKnoppen = DAGEN.map((d, i) => {
     const datum = plusDagen(w.maandag, i);
@@ -72,7 +77,7 @@ function weekHtml(w, aanpassingen, vandaag, gewicht, huidig, resultaten) {
   }).join('');
   return `
     <section class="week${huidig ? ' is-huidig' : ''}" data-week="${weekId(w)}" id="week-${weekId(w)}">
-      <h2>${w.label} ${BADGE[w.soort] ? `<span class="badge badge-${w.soort}">${BADGE[w.soort]}</span>` : ''}
+      <h2>${w.label} ${badge(w, laatste)}
         <small>${korteDatum(w.maandag)} – ${korteDatum(plusDagen(w.maandag, 6))}</small></h2>
       ${w.waarschuwingen.map((x) => `<div class="melding melding-te-snel" data-test="waarschuwing">⚠ ${x.tekst}</div>`).join('')}
       <div class="kaart trainingen">${w.trainingen.map((t) => trainingHtml(t, w, vandaag, gewicht, resultaten[t.id])).join('')}</div>
@@ -96,7 +101,7 @@ export function toonSchema(root, profiel, { vandaag = vandaagIso(), opslag = loc
       ? `<p class="uitleg">Je schema start op maandag ${korteDatum(plan.weken[0].maandag)}.</p>` : '';
     root.innerHTML = `<h1>Schema</h1>${start}
       <p class="hint">Tik op een training om de blokken te zien of hem naar een andere dag te verplaatsen.</p>
-      ${plan.weken.map((w) => weekHtml(w, aanpassingen, vandaag, profiel.gewicht, w === huidige, laadResultaten(opslag))).join('')}`;
+      ${plan.weken.map((w) => weekHtml(w, aanpassingen, vandaag, profiel.gewicht, w === huidige, laadResultaten(opslag), w === plan.weken.at(-1))).join('')}`;
     if (openWeek) root.querySelector(`#week-${openWeek} .week-aanpassen`)?.setAttribute('open', '');
     if (openTraining) root.querySelector(`[data-training="${openTraining}"]`)?.setAttribute('open', '');
     const doel = root.querySelector(openWeek ? `#week-${openWeek}` : '.week.is-huidig');

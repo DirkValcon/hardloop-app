@@ -13,6 +13,10 @@ export function laadResultaten(opslag) {
   }
 }
 
+export function bewaarResultaten(opslag, r) {
+  return bewaar(opslag, r);
+}
+
 function bewaar(opslag, r) {
   opslag.setItem(OPSLAG_RESULTATEN, JSON.stringify(r));
   meldOpgeslagen(OPSLAG_RESULTATEN);
@@ -30,7 +34,7 @@ export function valideerResultaat({ afstandKm, duurMin, kcal }) {
 export function markeerGedaan(opslag, training, { afstandKm, duurMin, kcal }, vandaag) {
   const r = laadResultaten(opslag);
   r[training.id] = {
-    status: 'gedaan', datum: vandaag, gepland: training.datum, type: training.type,
+    status: 'gedaan', datum: vandaag, gepland: training.datum, type: training.type, naam: training.naam,
     afstandKm: Math.round(afstandKm * 100) / 100, duurSec: Math.round(duurMin * 60), kcal: Math.round(kcal),
   };
   return bewaar(opslag, r);

@@ -32,7 +32,7 @@ try {
   await context.unroute(/\/(index\.html)?$/);
   await context.setOffline(true);
   await page.reload();
-  assert.match(await page.textContent('h1'), /5 km-tijd/);
+  assert.match(await page.textContent('h1'), /Wat loop je nu/);
   console.log('✓ offline: de app laadt zonder internet en toont online direct de nieuwste versie');
 } finally {
   await browser.close();

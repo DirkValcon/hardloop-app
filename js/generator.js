@@ -187,3 +187,14 @@ export function genereerSjabloon({ doelKm, maxKm, weken }) {
     basis: { rustig: 3.5, lang: Math.max(MIN_LOOP, halve(maxKm)), versnellingen: { herhaal: 6, sec: 20, herstelSec: 40 } },
   };
 }
+
+// Doeltijd beoordelen tegen je huidige niveau (Riegel vanaf je maximale afstand en tempo).
+// Zonder doeltijd is uitlopen het doel.
+export function beoordeelDoel({ maxKm, tempoSecPerKm, doelKm, doelSeconden }) {
+  const voorspeld = voorspelTijd(maxKm * tempoSecPerKm, maxKm, doelKm);
+  if (!doelSeconden) return { niveau: 'uitlopen', voorspeld };
+  const sneller = (voorspeld - doelSeconden) / voorspeld;
+  if (sneller <= 0) return { niveau: 'haalbaar', voorspeld, sneller };
+  if (sneller <= 0.05) return { niveau: 'ambitieus', voorspeld, sneller };
+  return { niveau: 'te-snel', voorspeld, sneller };
+}

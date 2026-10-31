@@ -1,5 +1,5 @@
 import { laadProfiel } from './profiel.js';
-import { toonOnboarding } from './onboarding.js';
+import { toonOnboarding, vervangSchema } from './onboarding.js';
 import { toonOverzicht } from './overzicht.js';
 import { toonSchema } from './schemaweergave.js';
 import { toonVandaag } from './vandaag.js';
@@ -24,7 +24,7 @@ const TABS = [
   { id: 'voortgang', naam: 'Voortgang', toon: toonVoortgang,
     icoon: '<path d="M5 20V12M12 20V5M19 20v-9" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/>' },
   { id: 'profiel', naam: 'Profiel',
-    toon: (r, p) => toonOverzicht(r, p, { account: accountHtml(gebruiker), uitloggen: afmelden }),
+    toon: (r, p) => toonOverzicht(r, p, { account: accountHtml(gebruiker), uitloggen: afmelden, nieuwSchema: () => toonNieuwSchema(p) }),
     icoon: '<circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>' },
 ];
 
@@ -50,6 +50,19 @@ function toonAfvinken(profiel, trainingId) {
     ${afrondFormulier({ afstandKm: training.afstandKm, duurSec: training.duurSec, kcal: kcalTraining(training, profiel.gewicht) })}`;
   const terug = () => history.length > 1 ? history.back() : (location.hash = '#vandaag');
   koppelAfronden(root, training, profiel, { opgeslagen: terug, annuleer: terug });
+}
+
+// Nieuw schema maken vanuit Profiel: dezelfde stappen als de onboarding, en het vervangt het oude.
+function toonNieuwSchema(profiel) {
+  document.body.classList.remove('met-tabs');
+  document.querySelector('nav.tabs')?.remove();
+  root.onclick = null;
+  const oudPlan = huidigPlan(profiel, vandaagIso());
+  toonOnboarding(root, (nieuw) => {
+    vervangSchema(localStorage, nieuw, oudPlan);
+    location.hash = '#vandaag';
+    start();
+  }, { bestaand: profiel, annuleer: () => start() });
 }
 
 function toonTab(profiel) {
