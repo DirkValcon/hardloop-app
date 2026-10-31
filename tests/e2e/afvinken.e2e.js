@@ -20,6 +20,17 @@ const tekst = async (page, sel) => (await page.textContent(sel)).replace(/\s+/g,
     const geschat = Number(await page.inputValue('#kcal'));
     assert.ok(geschat > 100 && geschat < 250, String(geschat));
 
+    // Story 19: eerst een samenvatting, de velden zitten achter Aanpassen.
+    assert.equal(await tekst(page, '[data-test=sam-duur]'), '20 min');
+    assert.match(await tekst(page, '[data-test=volgnummer]'), /Training 1 van 33/);
+    assert.equal(await page.locator('#afstandKm').isVisible(), false);
+    // Niet opslaan vraagt eerst of je het zeker weet.
+    await page.getByRole('button', { name: 'Niet opslaan' }).click();
+    assert.equal(await tekst(page, '[data-actie=annuleer]'), 'Echt weggooien?');
+    assert.equal(await page.locator('[data-test=afronden]').count(), 1, 'nog niet weggegooid');
+    await shot('story19-afronden');
+    await page.getByText('Afstand, tijd of kcal aanpassen').click();
+
     // Ongeldige afstand wordt geweigerd.
     await page.fill('#afstandKm', '0');
     await page.getByRole('button', { name: 'Opslaan als gedaan' }).click();
@@ -27,6 +38,7 @@ const tekst = async (page, sel) => (await page.textContent(sel)).replace(/\s+/g,
 
     // Afstand van de loopband: 2,5 km. Calorieën schuiven mee.
     await page.fill('#afstandKm', '2,5');
+    assert.equal(await tekst(page, '[data-test=sam-afstand]'), '2,5');
     const nieuw = Number(await page.inputValue('#kcal'));
     assert.ok(nieuw > 150 && nieuw < 300, String(nieuw));
     await shot('story7-afronden');

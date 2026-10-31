@@ -29,12 +29,14 @@ const TABS = [
 ];
 
 function toonLoop(profiel, trainingId) {
-  const training = huidigPlan(profiel, vandaagIso()).weken.flatMap((w) => w.trainingen).find((t) => t.id === trainingId);
+  const alle = huidigPlan(profiel, vandaagIso()).weken.flatMap((w) => w.trainingen);
+  const training = alle.find((t) => t.id === trainingId);
   if (!training) { location.hash = '#vandaag'; return; }
   document.body.classList.remove('met-tabs');
   document.querySelector('nav.tabs')?.remove();
   toonLoopscherm(root, training, {
     profiel,
+    volgnummer: { nr: alle.indexOf(training) + 1, totaal: alle.length },
     terug: () => { location.hash = '#vandaag'; },
     klaar: () => { location.hash = '#vandaag'; },
   });

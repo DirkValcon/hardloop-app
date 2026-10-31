@@ -87,7 +87,7 @@ export const kilometerTekst = (nr, sec) => `Kilometer ${nr}. ${spreekDuur(sec)}.
 
 // ---------- Scherm ----------
 
-export function toonLoopscherm(root, training, { opslag = localStorage, profiel, terug, klaar } = {}) {
+export function toonLoopscherm(root, training, { opslag = localStorage, profiel, terug, klaar, volgnummer = null } = {}) {
   const geluid = maakGeluid();
   let speler = maakSpeler(training.blokken);
   let timer = null;
@@ -172,18 +172,20 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     const afstandKm = Math.round(t.afstandKm * 100) / 100;
     opruimen();
     document.body.classList.remove('loopmodus');
+    const samenvatting = { ...(volgnummer ?? {}) };
     root.innerHTML = `
-      <section class="loop" data-test="loopscherm">
-        <h1>${gestopt ? 'Gestopt' : 'Klaar!'}</h1>
+      <section class="loop loop-klaar" data-test="loopscherm">
+        <div class="klaar-kop${gestopt ? ' is-gestopt' : ''}" aria-hidden="true">${gestopt ? '■' : '✓'}</div>
+        <h1>${gestopt ? 'Gestopt' : 'Klaar! Goed gedaan.'}</h1>
         <p class="uitleg" data-test="klaar">${gestopt
           ? `Je bent gestopt na ${Math.round(sec / 60)} min. Wil je opslaan wat je gedaan hebt?`
-          : `${training.naam} zit erop. Goed gedaan.`}</p>
+          : `${training.naam} zit erop.`}</p>
         ${afrondFormulier({
           afstandKm, duurSec: sec,
           kcal: schatKcal(training, afstandKm, profiel.gewicht),
-        })}
+        }, {}, { samenvatting })}
       </section>`;
-    koppelAfronden(root, training, profiel, { opslag, opgeslagen: () => klaar?.(), annuleer: () => terug?.() });
+    koppelAfronden(root, training, profiel, { opslag, samenvatting, opgeslagen: () => klaar?.(), annuleer: () => terug?.() });
   }
 
   function ververs() {

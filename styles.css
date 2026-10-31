@@ -390,3 +390,15 @@ details.gemist[open] .gemist-actie::after { content: " ⌄"; }
 .weekdag.is-gekozen small { color: var(--accent); }
 .status-regel { margin: 4px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--vlak); font-weight: 700; }
 .status-regel.is-gedaan { background: var(--rustig-zacht); color: var(--rustig); }
+
+/* ---------- Afronden met samenvatting (story 19) ---------- */
+.loop-klaar { text-align: left; }
+.klaar-kop { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; margin: 12px 0 8px; background: var(--rustig); color: #fff; font-size: 30px; font-weight: 800; }
+.klaar-kop.is-gestopt { background: var(--vlak); color: var(--zacht); font-size: 22px; }
+.samenvatting-tegels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+.samenvatting-tegels .tegel strong { font-size: 28px; }
+.afronden-velden { margin: 14px 0 0; }
+.afronden-velden > summary { color: var(--accent); font-weight: 700; cursor: pointer; padding: 8px 0 14px; list-style: none; }
+.afronden-velden > summary::-webkit-details-marker { display: none; }
+form.afronden:not(:has(.samenvatting-tegels)) .afronden-velden > summary { display: none; }
+button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }

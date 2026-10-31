@@ -43,3 +43,4 @@ npm run serve     # lokaal bekijken op http://127.0.0.1:8080/
 | 18 | Loopscherm: Stop vasthouden, grote Pauze, blok overslaan ongedaan maken, alles in beeld | klaar |
 | 16 | Vandaag: Start bovenaan, gemiste trainingen compact eronder | klaar |
 | 17 | Vandaag: datum, weeknummer en weekstrook met gedaan/gemist/gepland | klaar |
+| 19 | Afronden: eerst samenvatting, aanpassen achter een knop, Niet opslaan vraagt bevestiging | klaar |
