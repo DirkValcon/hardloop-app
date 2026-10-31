@@ -25,16 +25,18 @@ function blokRegel(b) {
     <span class="blok-waarden"><strong>${kmh(b.kmh)}</strong> km/u<small>${String(b.helling).replace('.', ',')}% helling</small></span></li>`;
 }
 
-function verplaatsHtml(t, week, vandaag) {
+function verplaatsHtml(t, week, vandaag, { metNaam = false } = {}) {
   if (t.type === 'doel') return `<p class="hint">De ${t.naam.replace(/ op doeltijd$/, '')} staat vast op je doeldatum.</p>`;
   if (t.datum < vandaag) return '';
   const knoppen = DAGEN.map((d, i) => {
     const datum = plusDagen(week.maandag, i);
     const kan = datum !== t.datum && datum >= vandaag && !(week.trainingen.find((x) => x.datum === datum)?.type === 'doel');
     return `<button type="button" class="dagknop" data-verplaats="${t.id}" data-naar="${datum}" ${kan ? '' : 'disabled'}
-      aria-label="Verplaats naar ${d} ${korteDatum(datum)}">${d}</button>`;
+      aria-label="Verplaats ${metNaam ? `${t.naam} ` : ''}naar ${d} ${korteDatum(datum)}">${d}</button>`;
   }).join('');
-  return `<div class="verplaats"><span class="hint">Verplaats naar</span><div class="dagknoppen">${knoppen}</div></div>`;
+  if (metNaam) return `<div class="verplaats-rij"><span class="hint">${t.naam}</span><div class="dagknoppen">${knoppen}</div></div>`;
+  return `<div class="andere-dag"><button type="button" class="link-knop" data-actie="andere-dag" aria-expanded="false">Andere dag</button>
+    <div class="dagknoppen" hidden>${knoppen}</div></div>`;
 }
 
 function statusHtml(t, r, vandaag) {
@@ -63,29 +65,38 @@ function trainingHtml(t, week, vandaag, gewicht, r) {
           <small>${minuten(t.duurSec)} · ca. ${km(t.afstandKm)} km · ${kcalTraining(t, gewicht)} kcal</small></span>
       </summary>
       ${statusHtml(t, r, vandaag)}
-      ${r ? '' : verplaatsHtml(t, week, vandaag)}
       <ol class="blokken">${t.blokken.map(blokRegel).join('')}</ol>
+      ${r ? '' : verplaatsHtml(t, week, vandaag)}
     </details>`;
 }
 
-function weekHtml(w, aanpassingen, vandaag, gewicht, huidig, resultaten, laatste = true) {
+function weekHtml(w, aanpassingen, vandaag, gewicht, huidig, resultaten, laatste = true, open = false) {
   const vrij = new Set(aanpassingen.vrij);
   const vrijKnoppen = DAGEN.map((d, i) => {
     const datum = plusDagen(w.maandag, i);
     return `<button type="button" class="dagknop${vrij.has(datum) ? ' is-vrij' : ''}" data-vrij="${datum}"
       aria-pressed="${vrij.has(datum)}" ${datum < vandaag ? 'disabled' : ''} aria-label="${d} ${korteDatum(datum)} vrij">${d}</button>`;
   }).join('');
+  const gedaan = w.trainingen.filter((t) => resultaten[t.id]?.status === 'gedaan').length;
+  const kmWeek = w.trainingen.reduce((som, t) => som + t.afstandKm, 0);
+  const verplaatsbaar = w.trainingen.filter((t) => !resultaten[t.id] && t.type !== 'doel' && t.datum >= vandaag);
   return `
     <section class="week${huidig ? ' is-huidig' : ''}" data-week="${weekId(w)}" id="week-${weekId(w)}">
-      <h2>${w.label} ${badge(w, laatste)}
+      <details class="week-inhoud" ${open ? 'open' : ''}>
+      <summary><h2>${w.label} ${badge(w, laatste)}${huidig ? '<span class="badge badge-nu">Deze week</span>' : ''}
         <small>${korteDatum(w.maandag)} – ${korteDatum(plusDagen(w.maandag, 6))}</small></h2>
+        <span class="week-samenvatting" data-test="week-samenvatting">${w.trainingen.length} trainingen · ca. ${km(kmWeek)} km${gedaan ? ` · ${gedaan}/${w.trainingen.length} gedaan` : ''}</span></summary>
       ${w.waarschuwingen.map((x) => `<div class="melding melding-te-snel" data-test="waarschuwing">⚠ ${x.tekst}</div>`).join('')}
       <div class="kaart trainingen">${w.trainingen.map((t) => trainingHtml(t, w, vandaag, gewicht, resultaten[t.id])).join('')}</div>
       ${w.vervallen.length ? `<p class="hint" data-test="vervallen">Vervalt deze week: ${w.vervallen.map((t) => t.naam).join(', ')}.</p>` : ''}
       <details class="week-aanpassen">
-        <summary>Dagen vrij zetten deze week</summary>
+        <summary>Week aanpassen</summary>
+        ${verplaatsbaar.length ? `<span class="titel">Training verplaatsen</span>
+        ${verplaatsbaar.map((t) => verplaatsHtml(t, w, vandaag, { metNaam: true })).join('')}` : ''}
+        <span class="titel">Vrije dagen</span>
         <div class="dagknoppen">${vrijKnoppen}</div>
         <p class="hint">Een vrije dag laat eerst een rustige loop vervallen; kwaliteit en lange loop blijven zo lang mogelijk staan.</p>
+      </details>
       </details>
     </section>`;
 }
@@ -93,38 +104,63 @@ function weekHtml(w, aanpassingen, vandaag, gewicht, huidig, resultaten, laatste
 export function toonSchema(root, profiel, { vandaag = vandaagIso(), opslag = localStorage } = {}) {
   const basisplan = maakPlan(profiel, { vandaag });
   let aanpassingen = laadAanpassingen(opslag);
+  // Alleen de huidige week staat open (of de eerste, als het schema nog moet beginnen); de rest is ingeklapt.
+  const eersteHuidig = pasToe(basisplan, aanpassingen).weken.find((w) => vandaag <= plusDagen(w.maandag, 6));
+  const openWeken = new Set(eersteHuidig ? [weekId(eersteHuidig)] : []);
+  let kijker = null;
 
-  function teken({ scroll = false, openWeek = null, openTraining = null } = {}) {
+  function teken({ scroll = false, openWeek = null, aanpassen = false, openTraining = null } = {}) {
     const plan = pasToe(basisplan, aanpassingen);
     const huidige = plan.weken.find((w) => vandaag >= w.maandag && vandaag <= plusDagen(w.maandag, 6));
+    if (openWeek) openWeken.add(openWeek);
     const start = plan.weken[0].maandag > vandaag
       ? `<p class="uitleg">Je schema start op maandag ${korteDatum(plan.weken[0].maandag)}.</p>` : '';
+    const resultaten = laadResultaten(opslag);
     root.innerHTML = `<h1>Schema</h1>${start}
-      <p class="hint">Tik op een training om de blokken te zien of hem naar een andere dag te verplaatsen.</p>
-      ${plan.weken.map((w) => weekHtml(w, aanpassingen, vandaag, profiel.gewicht, w === huidige, laadResultaten(opslag), w === plan.weken.at(-1))).join('')}`;
-    if (openWeek) root.querySelector(`#week-${openWeek} .week-aanpassen`)?.setAttribute('open', '');
+      <p class="hint">Tik op een week om hem open te klappen, en op een training voor de blokken.</p>
+      ${plan.weken.map((w) => weekHtml(w, aanpassingen, vandaag, profiel.gewicht, w === huidige, resultaten, w === plan.weken.at(-1), openWeken.has(weekId(w)))).join('')}
+      ${huidige ? '<button type="button" class="naar-week" data-actie="naar-week" hidden>Naar deze week</button>' : ''}`;
+    if (aanpassen && openWeek) root.querySelector(`#week-${openWeek} .week-aanpassen`)?.setAttribute('open', '');
     if (openTraining) root.querySelector(`[data-training="${openTraining}"]`)?.setAttribute('open', '');
+    root.querySelectorAll('.week-inhoud').forEach((d) => d.addEventListener('toggle', () => {
+      const id = d.closest('.week').dataset.week;
+      if (d.open) openWeken.add(id); else openWeken.delete(id);
+    }));
     const doel = root.querySelector(openWeek ? `#week-${openWeek}` : '.week.is-huidig');
     if (scroll || openWeek) doel?.scrollIntoView({ block: 'start' });
+    // "Naar deze week" verschijnt zodra de huidige week uit beeld is.
+    kijker?.disconnect();
+    const knop = root.querySelector('[data-actie=naar-week]');
+    if (knop && 'IntersectionObserver' in window) {
+      kijker = new IntersectionObserver(([e]) => { knop.hidden = e.isIntersecting || !root.contains(knop); });
+      kijker.observe(root.querySelector('.week.is-huidig'));
+    }
   }
 
   root.onclick = (e) => {
     const knop = e.target.closest('button');
     if (!knop || knop.disabled) return;
     const week = knop.closest('.week')?.dataset.week;
-    if (knop.dataset.verplaats) {
+    if (knop.dataset.actie === 'andere-dag') {
+      const open = knop.getAttribute('aria-expanded') !== 'true';
+      knop.setAttribute('aria-expanded', String(open));
+      knop.nextElementSibling.hidden = !open;
+    } else if (knop.dataset.actie === 'naar-week') {
+      const huidig = root.querySelector('.week.is-huidig');
+      huidig.querySelector('.week-inhoud').open = true;
+      huidig.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } else if (knop.dataset.verplaats) {
+      const uitWeek = knop.closest('.week-aanpassen') !== null;
       aanpassingen = verplaats(pasToe(basisplan, aanpassingen), aanpassingen, knop.dataset.verplaats, knop.dataset.naar);
       bewaarAanpassingen(opslag, aanpassingen);
-      teken({ openWeek: week, openTraining: knop.dataset.verplaats });
-      root.querySelector(`#week-${week} .week-aanpassen`)?.removeAttribute('open');
+      teken({ openWeek: week, aanpassen: uitWeek, openTraining: uitWeek ? null : knop.dataset.verplaats });
     } else if (knop.dataset.ongedaan) {
       maakOngedaan(opslag, knop.dataset.ongedaan);
       teken({ openWeek: week, openTraining: knop.dataset.ongedaan });
-      root.querySelector(`#week-${week} .week-aanpassen`)?.removeAttribute('open');
     } else if (knop.dataset.vrij) {
       aanpassingen = zetVrij(aanpassingen, knop.dataset.vrij, knop.getAttribute('aria-pressed') !== 'true');
       bewaarAanpassingen(opslag, aanpassingen);
-      teken({ openWeek: week });
+      teken({ openWeek: week, aanpassen: true });
     }
   };
   teken({ scroll: true });
