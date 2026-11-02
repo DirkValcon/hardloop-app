@@ -20,8 +20,11 @@ try {
   await page.waitForSelector('[data-test=startweek-keuze]');
   assert.equal(await page.inputValue('#startweek'), '2026-11-09');
   const opties = await page.locator('#startweek option').allTextContents();
-  assert.equal(opties[0], 'week van 26 okt (deze week)');
-  assert.equal(opties[1], 'week van 2 nov (volgende week)');
+  // Eerst de 8 weken hiervoor (al eerder begonnen), dan deze week en volgende week.
+  assert.equal(opties[0], 'week van 31 aug');
+  assert.equal(opties[7], 'week van 19 okt (vorige week)');
+  assert.equal(opties[8], 'week van 26 okt (deze week)');
+  assert.equal(opties[9], 'week van 2 nov (volgende week)');
 
   // Een week eerder: de doeldatum schuift mee naar zo 17 jan.
   await page.selectOption('#startweek', '2026-11-02');

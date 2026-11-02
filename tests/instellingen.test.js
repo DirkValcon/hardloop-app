@@ -59,7 +59,7 @@ test('gewicht geldt meteen; doeldatum alleen gecontroleerd als hij verandert', (
   const p = wijzigProfiel(DIRK, invoer({ gewicht: '78' }), VANDAAG);
   assert.equal(p.gewicht, 78);
   assert.deepEqual(valideerWijziging(DIRK, invoer(), VANDAAG), {}); // doeldatum < 11 weken, maar ongewijzigd
-  assert.ok(valideerWijziging(DIRK, invoer({ doelDatum: '2027-01-16' }), VANDAAG).doelDatum); // week 1 zou vorige week zijn
+  assert.ok(valideerWijziging(DIRK, invoer({ doelDatum: '2026-11-10' }), VANDAAG).doelDatum); // doeldatum al voorbij
   assert.ok(valideerWijziging(DIRK, invoer({ trainingsdagen: ['ma'] }), VANDAAG).trainingsdagen);
 });
 
@@ -83,4 +83,34 @@ test('startweek: een doeldatum zodat week 1 deze week is mag, de doeldatum versc
   const p = wijzigProfiel(DIRK, invoerNu, VANDAAG);
   assert.equal(maakPlan(p, { vandaag: VANDAAG }).start, '2026-11-09');
   assert.equal(p.extraWeken, 0);
+});
+
+test('al eerder begonnen: week 1 mag in het verleden liggen, afgevinkte trainingen blijven gekoppeld', () => {
+  // Woensdag 11 nov, week 1 = 2 nov. Eigenlijk begonnen op 26 okt: doeldatum een week eerder.
+  const invoerEerder = invoer({ doelDatum: '2027-01-10' });
+  assert.deepEqual(valideerWijziging(DIRK, invoerEerder, VANDAAG), {});
+  const p = wijzigProfiel(DIRK, invoerEerder, VANDAAG);
+  const plan = maakPlan(p, { vandaag: VANDAAG });
+  assert.equal(plan.start, '2026-10-26');
+  assert.equal(p.extraWeken, 0);
+  assert.equal(p.extraWekenKeuze, null);
+  assert.deepEqual(week(plan, 1).trainingen.map((t) => t.id), week(maakPlan(DIRK, { vandaag: VANDAAG }), 1).trainingen.map((t) => t.id));
+});
+
+test('eigen schema: aantal weken wijzigen houdt week 1 vast en schuift de doeldatum mee', () => {
+  const EIGEN = { ...DIRK, schema: { id: 'sx', doelKm: 10, maxKm: 5, tempoSecPerKm: 420, weken: 11 } };
+  // 12 weken in plaats van 11: doeldatum een week later, week 1 blijft 2 nov.
+  const langer = invoer({ doelDatum: '2027-01-24', weken: '12' });
+  assert.deepEqual(valideerWijziging(EIGEN, langer, VANDAAG), {});
+  const p = wijzigProfiel(EIGEN, langer, VANDAAG);
+  assert.equal(p.schema.weken, 12);
+  assert.equal(p.schema.id, 'sx');
+  const plan = maakPlan(p, { vandaag: VANDAAG });
+  assert.equal(plan.start, '2026-11-02');
+  assert.equal(plan.weken.length, 12);
+  assert.equal(plan.weken[0].trainingen[0].id.startsWith('sx-w1-'), true);
+  // Ongeldig aantal weken wordt geweigerd.
+  assert.ok(valideerWijziging(EIGEN, invoer({ weken: '2' }), VANDAAG).weken);
+  // Vast schema (zonder eigen schema): weken-veld telt niet mee.
+  assert.equal(wijzigProfiel(DIRK, invoer({ weken: '12' }), VANDAAG).schema, undefined);
 });
