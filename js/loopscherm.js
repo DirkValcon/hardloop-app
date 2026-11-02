@@ -10,6 +10,10 @@ import { toonMelding, sluitMelding } from './melding.js';
 
 // Stoppen gaat door Stop even ingedrukt te houden, zodat je niet per ongeluk stopt.
 export const STOP_VASTHOUDEN_MS = 1000;
+// + en − vasthouden: na HERHAAL_START_MS doortellen, eerst rustig en daarna sneller.
+export const HERHAAL_START_MS = 400;
+export const HERHAAL_MS = 180;
+export const HERHAAL_SNEL_MS = 90;
 
 export const OPSLAG_LOPEND = 'hardloop-app.lopend.v1';
 
@@ -331,16 +335,43 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
         bijActie: () => { if (timer === null) return; speler = ervoor; bewaar(); ververs(); },
       });
     }
-    if (actie === 'sneller' || actie === 'langzamer') {
-      speler = pasSnelheidAan(speler, nu, actie === 'sneller' ? 0.1 : -0.1);
-      bewaar();
-      ververs();
-    }
+    // Met vinger of muis regelt het vasthouden (hieronder) de stappen; dit is voor het toetsenbord.
+    if ((actie === 'sneller' || actie === 'langzamer') && e.detail === 0) stapSnelheid(actie);
     if (actie === 'afronden') {
       speler = pauzeer(speler, nu);
       tekenKlaar();
     }
   };
+
+  function stapSnelheid(actie) {
+    speler = pasSnelheidAan(speler, Date.now(), actie === 'sneller' ? 0.1 : -0.1);
+    bewaar();
+    ververs();
+  }
+
+  // + of − vasthouden: meteen één stap, na een korte pauze steeds sneller doortellen.
+  let herhalen = null;
+  const stopHerhalen = () => {
+    if (!herhalen) return;
+    clearTimeout(herhalen.timer);
+    herhalen.knop.classList.remove('is-ingedrukt');
+    herhalen = null;
+  };
+  function startHerhalen(knop) {
+    const actie = knop.dataset.actie;
+    knop.classList.add('is-ingedrukt');
+    herhalen = { knop, stappen: 0 };
+    stapSnelheid(actie);
+    const volgende = (wacht) => {
+      herhalen.timer = setTimeout(() => {
+        if (!herhalen) return;
+        herhalen.stappen += 1;
+        stapSnelheid(actie);
+        volgende(herhalen.stappen < 5 ? HERHAAL_MS : HERHAAL_SNEL_MS);
+      }, wacht);
+    };
+    volgende(HERHAAL_START_MS);
+  }
 
   function stoppen() {
     speler = pauzeer(speler, Date.now());
@@ -358,6 +389,15 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   };
   function koppelStop() {
     root.onpointerdown = (e) => {
+      const plusmin = e.target.closest('[data-actie=sneller], [data-actie=langzamer]');
+      if (plusmin) {
+        e.preventDefault();
+        stopHerhalen();
+        // Vasthouden blijft gelden, ook als de knop onder je vinger iets verschuift.
+        try { plusmin.setPointerCapture(e.pointerId); } catch { /* oudere browsers */ }
+        startHerhalen(plusmin);
+        return;
+      }
       const knop = e.target.closest('[data-actie=stop]');
       if (!knop) return;
       e.preventDefault();
@@ -366,12 +406,15 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
       v.timer = setTimeout(() => { vasthouden = null; stoppen(); }, STOP_VASTHOUDEN_MS);
       vasthouden = v;
     };
-    root.onpointerup = loslaten;
-    root.onpointercancel = loslaten;
-    root.onpointerout = (e) => { if (vasthouden && !vasthouden.knop.contains(e.relatedTarget)) loslaten(); };
+    root.onpointerup = () => { stopHerhalen(); loslaten(); };
+    root.onpointercancel = () => { stopHerhalen(); loslaten(); };
+    root.addEventListener('lostpointercapture', stopHerhalen, true);
+    root.onpointerout = (e) => {
+      if (vasthouden && !vasthouden.knop.contains(e.relatedTarget)) loslaten();
+    };
   }
 
   if (speler.gestartOp !== null) loop();
   else tekenVoorStart();
-  return () => { clearInterval(timer); stopSchermAan?.(); document.removeEventListener('visibilitychange', geluidTerug); };
+  return () => { stopHerhalen(); clearInterval(timer); stopSchermAan?.(); document.removeEventListener('visibilitychange', geluidTerug); };
 }

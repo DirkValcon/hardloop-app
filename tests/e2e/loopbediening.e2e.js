@@ -21,10 +21,28 @@ try {
   assert.ok(pauze.width > stop.width);
   await shot('story18-loopscherm-se');
 
+  // + en − vasthouden telt door; kort tikken is precies één stap.
+  const snelheid = async () => Number((await page.textContent('[data-test=snelheid]')).replace(',', '.'));
+  const begin = await snelheid();
+  const plus = await page.getByRole('button', { name: 'Sneller' }).boundingBox();
+  await page.mouse.move(plus.x + plus.width / 2, plus.y + plus.height / 2);
+  await page.mouse.down();
+  await page.clock.runFor(1500);
+  await page.mouse.up();
+  const naHouden = await snelheid();
+  assert.ok(naHouden - begin >= 0.9, `vasthouden telt door (${begin} → ${naHouden})`);
+  await page.clock.runFor(1000);
+  assert.equal(await snelheid(), naHouden, 'stopt na loslaten');
+  await page.getByRole('button', { name: 'Langzamer' }).click();
+  assert.equal(await snelheid(), Math.round((naHouden - 0.1) * 10) / 10, 'kort tikken is één stap');
+  await page.getByRole('button', { name: 'Langzamer' }).focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await snelheid(), Math.round((naHouden - 0.2) * 10) / 10, 'toetsenbord werkt ook');
+
   await page.clock.runFor(5 * 60_000);
   await houdStopIngedrukt(page);
   await page.waitForSelector('[data-test=afronden]');
   assert.match(await page.textContent('[data-test=klaar]'), /gestopt na 5 min/);
   assert.deepEqual(fouten, []);
-  console.log('✓ story 18 loopscherm: alles in beeld op een iPhone SE, Stop vasthouden stopt');
+  console.log('✓ story 18 loopscherm: alles in beeld op een iPhone SE, Stop vasthouden stopt, + en − vasthouden telt door');
 } finally { await sluit(); }
