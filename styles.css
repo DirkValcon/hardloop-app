@@ -374,24 +374,48 @@ details.gemist[open] .gemist-actie::after { content: " ⌄"; }
 .vandaag-kaart .fases { margin-top: 16px; }
 
 /* ---------- Vandaag: datum en weekstrook (story 17) ---------- */
-.groet { color: var(--zacht); font-weight: 700; font-size: 15px; margin: 8px 0 0; }
+.groet { color: var(--zacht); font-weight: 700; font-size: 15px; margin: 0; }
 .groet + h1 { margin-top: 0; }
-.weekstrook { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 6px 0 18px; }
-.weekdag { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; background: none; border-radius: 0; color: var(--zacht); font-weight: 700; font-size: 14px; }
-.weekdag small { font-size: 14px; }
+/* Kalender bovenin Vandaag: veeg tussen de weken, tik op een dag. */
+.kalender { background: var(--kaart); border-radius: var(--rond); box-shadow: var(--schaduw); padding: 4px 4px 8px; margin: 6px 0 14px; }
+.kalender-kop { display: flex; align-items: center; justify-content: space-between; padding: 0 2px 2px; }
+.kalender-week { font-weight: 800; font-size: 16px; }
+.kal-pijl { background: none; padding: 2px 16px 6px; font-size: 24px; line-height: 1; color: var(--zacht); border-radius: 12px; }
+.kal-pijl:disabled { opacity: .25; }
+.weekbaan { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+.weekbaan::-webkit-scrollbar { display: none; }
+.weekpagina { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+.weekstrook { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.weekdag { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0 0 2px; background: none; border-radius: 14px; color: var(--zacht); font-weight: 700; font-size: 13px; }
+.weekdag small { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
 .weekdag b {
-  display: grid; place-items: center; width: 100%; max-width: 42px; aspect-ratio: 1; border-radius: 50%;
-  background: var(--kaart); color: var(--tekst); font-size: 16px; box-shadow: var(--schaduw);
+  display: grid; place-items: center; width: 100%; max-width: 36px; aspect-ratio: 1; border-radius: 50%;
+  color: var(--tekst); font-size: 16px; font-variant-numeric: tabular-nums;
 }
-.weekdag.is-rust b { background: transparent; box-shadow: none; color: var(--zacht); font-weight: 600; }
-.weekdag.is-gepland b { box-shadow: inset 0 0 0 2.5px var(--type); }
-.weekdag.is-gedaan b { background: var(--rustig); color: #fff; }
-.weekdag.is-gemist b { box-shadow: inset 0 0 0 2px var(--zacht); background: transparent; outline: 2px dashed var(--bg); outline-offset: -2px; }
-.weekdag.is-overgeslagen b { background: var(--vlak); color: var(--zacht); text-decoration: line-through; }
+.weekdag.is-rust b { color: var(--zacht); font-weight: 600; }
+/* Het streepje onder de dag: open = rand in de kleur van het type, gedaan = gevuld. */
+.weekdag i { display: block; width: 16px; height: 6px; border-radius: 3px; }
+.weekdag.is-gepland i { box-shadow: inset 0 0 0 2px var(--type); }
+.weekdag.is-gedaan i { background: var(--type); }
+.weekdag.is-gemist i { box-shadow: inset 0 0 0 2px var(--zacht); opacity: .7; }
+.weekdag.is-overgeslagen i { background: var(--lijn); }
+.weekdag.is-overgeslagen b { text-decoration: line-through; color: var(--zacht); }
 .weekdag.is-vandaag small { color: var(--accent); }
-.weekdag.is-vandaag.is-rust b { background: var(--accent-zacht); color: var(--accent); }
-.weekdag.is-gekozen b { outline: 3px solid var(--accent); outline-offset: 2px; }
-.weekdag.is-gekozen small { color: var(--accent); }
+.weekdag.is-vandaag b { background: var(--accent); color: var(--accent-tekst); }
+.weekdag.is-gekozen b { box-shadow: 0 0 0 2.5px var(--tekst); }
+.weekdag.is-vandaag.is-gekozen b { box-shadow: 0 0 0 2.5px var(--kaart), 0 0 0 4.5px var(--accent); }
+.naar-vandaag { display: block; margin: 8px auto 0; padding: 6px 14px; font-size: 14px; border-radius: 999px; background: var(--accent-zacht); color: var(--accent); }
+.naar-vandaag[hidden] { display: none; }
+.rust-kaart h2 { margin: 4px 0 6px; }
+/* Weekoverzicht: een balkje per training en de kilometers van de week. */
+.weekoverzicht-kop { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.weekoverzicht-kop small { color: var(--zacht); font-weight: 600; }
+.weekbalk { display: flex; gap: 6px; margin: 12px 0 10px; }
+.weekbalk span { flex: 1; height: 8px; border-radius: 4px; background: var(--vlak); }
+.weekbalk span.is-gedaan { background: var(--type); }
+.weekbalk span.is-overgeslagen { background: var(--lijn); }
+.weekoverzicht-cijfers { display: flex; justify-content: space-between; color: var(--zacht); font-size: 15px; }
+.weekoverzicht-cijfers b { color: var(--tekst); }
 .status-regel { margin: 4px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--vlak); font-weight: 700; }
 .status-regel.is-gedaan { background: var(--rustig-zacht); color: var(--rustig); }
 
@@ -465,7 +489,7 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
   nav.tabs a[aria-current=page] { background: var(--accent-zacht); }
   nav.tabs a[aria-current=page] svg { background: none; }
   body.met-tabs main { max-width: 1040px; padding: 32px 8px 48px; }
-  body.met-tabs main:has(> .weekstrook), body.met-tabs main:has(> [data-test=samenvatting]) { max-width: 760px; }
+  body.met-tabs main:has(> .kalender), body.met-tabs main:has(> [data-test=samenvatting]) { max-width: 760px; }
   .toast, .naar-week { left: calc(248px + (100vw - 248px) / 2); right: auto; transform: translateX(-50%); width: min(488px, 80vw); }
   .naar-week { width: auto; }
   body:not(.met-tabs) .toast { left: 50%; }

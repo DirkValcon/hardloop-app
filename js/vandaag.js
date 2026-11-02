@@ -56,38 +56,67 @@ const verversScherm = () => window.dispatchEvent(new HashChangeEvent('hashchange
 const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 const hoofdletter = (t) => t[0].toUpperCase() + t.slice(1);
 
-// Kop boven Vandaag: "Donderdag 12 november · week 2 van 11".
-function datumKop(plan, week, vandaag) {
+// Kop boven Vandaag: "Donderdag 12 november". Het weeknummer staat boven de kalender.
+function datumKop(vandaag) {
   const d = naarDatum(vandaag);
-  const dag = `${hoofdletter(DAGNAAM[dagVan(vandaag)])} ${d.getUTCDate()} ${MAANDEN[d.getUTCMonth()]}`;
-  if (!week) return dag;
-  const aantal = plan.weken.filter((w) => w.soort !== 'basis').length;
-  return `${dag} · ${week.soort === 'basis' ? week.label.toLowerCase() : `week ${week.nummer} van ${aantal}`}`;
+  return `${hoofdletter(DAGNAAM[dagVan(vandaag)])} ${d.getUTCDate()} ${MAANDEN[d.getUTCMonth()]}`;
 }
 
-// Strook met de zeven dagen van de week: gedaan, gemist, gepland of rustdag. Tik op een dag met
-// een training om die te bekijken.
-function weekstrookHtml(week, resultaten, vandaag, getoond) {
-  return `<div class="weekstrook" data-test="weekstrook">${Array.from({ length: 7 }, (_, i) => {
+const weekNaam = (plan, week) => {
+  if (week.soort === 'basis') return week.label;
+  return `Week ${week.nummer} van ${plan.weken.filter((w) => w.soort !== 'basis').length}`;
+};
+
+// Eén week in de kalender: zeven dagen met daaronder een streepje per training (gepland, gedaan,
+// gemist of overgeslagen). Elke dag is aan te tikken, ook een rustdag.
+function weekHtml(week, resultaten, vandaag, gekozenDag) {
+  return `<div class="weekstrook" data-test="weekstrook" data-maandag="${week.maandag}">${Array.from({ length: 7 }, (_, i) => {
     const datum = plusDagen(week.maandag, i);
     const d = naarDatum(datum).getUTCDate();
     const dag = dagVan(datum);
     const t = week.trainingen.find((x) => x.datum === datum);
-    const nu = datum === vandaag ? ' is-vandaag' : '';
-    if (!t) return `<span class="weekdag is-rust${nu}" aria-label="${DAGNAAM[dag]} ${d}: rustdag"><small>${dag}</small><b>${d}</b></span>`;
-    const r = resultaten[t.id]?.status;
-    const status = r ?? (datum < vandaag ? 'gemist' : 'gepland');
-    return `<button type="button" class="weekdag is-${status} training-${t.type}${nu}${t.id === getoond ? ' is-gekozen' : ''}"
-      data-toon="${t.id}" data-status="${status}" aria-label="${DAGNAAM[dag]} ${d}: ${t.naam}, ${status}"><small>${dag}</small><b>${d}</b></button>`;
+    const klassen = `${datum === vandaag ? ' is-vandaag' : ''}${datum === gekozenDag ? ' is-gekozen' : ''}`;
+    if (!t) {
+      return `<button type="button" class="weekdag is-rust${klassen}" data-dag="${datum}"
+        aria-label="${DAGNAAM[dag]} ${d}: rustdag"><small>${dag}</small><b>${d}</b><i aria-hidden="true"></i></button>`;
+    }
+    const status = resultaten[t.id]?.status ?? (datum < vandaag ? 'gemist' : 'gepland');
+    return `<button type="button" class="weekdag is-${status} training-${t.type}${klassen}" data-toon="${t.id}" data-status="${status}"
+      aria-label="${DAGNAAM[dag]} ${d}: ${t.naam}, ${status}"><small>${dag}</small><b>${d}</b><i aria-hidden="true"></i></button>`;
   }).join('')}</div>`;
 }
 
-export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = localStorage, gekozen = null } = {}) {
+// Weekoverzicht onder de dag: hoeveel trainingen af zijn en hoeveel km je liep van het geplande.
+function overzichtHtml(plan, week, resultaten) {
+  const n = week.trainingen.length;
+  const klaar = week.trainingen.filter((t) => resultaten[t.id]).length;
+  const gelopen = week.trainingen.reduce((s, t) => s + (resultaten[t.id]?.status === 'gedaan' ? resultaten[t.id].afstandKm ?? 0 : 0), 0);
+  const gepland = week.trainingen.reduce((s, t) => s + t.afstandKm, 0);
+  const extra = week.soort === 'herstel' ? ' · herstelweek' : '';
+  return `<div class="weekoverzicht-kop"><strong>Overzicht ${weekNaam(plan, week).replace(/ van \d+$/, '').toLowerCase()}</strong><small>${korteDatum(week.maandag)} – ${korteDatum(plusDagen(week.maandag, 6))}${extra}</small></div>
+    <div class="weekbalk" aria-hidden="true">${week.trainingen.map((t) => `<span class="training-${t.type} is-${resultaten[t.id]?.status ?? 'open'}"></span>`).join('')}</div>
+    <div class="weekoverzicht-cijfers"><span>Trainingen <b data-test="week-trainingen">${klaar}/${n}</b></span><span>Afstand <b>${km(gelopen)} / ${km(gepland)} km</b></span></div>`;
+}
+
+// Kalender bovenin: alle weken naast elkaar, veeg (of tik op de pijltjes) naar een andere week.
+function kalenderHtml(plan, getoondeWeek, vandaag) {
+  const deWeek = plan.weken.find((w) => vandaag >= w.maandag && vandaag <= plusDagen(w.maandag, 6));
+  return `<section class="kalender" data-test="kalender">
+    <div class="kalender-kop">
+      <button type="button" class="kal-pijl" data-week="-1" aria-label="Vorige week">‹</button>
+      <span class="kalender-week" data-test="weeknaam" aria-live="polite">${weekNaam(plan, getoondeWeek)}</span>
+      <button type="button" class="kal-pijl" data-week="1" aria-label="Volgende week">›</button>
+    </div>
+    <div class="weekbaan" data-test="weekbaan">${plan.weken.map((w) => `<div class="weekpagina">__WEEK_${w.maandag}__</div>`).join('')}</div>
+    ${deWeek ? `<button type="button" class="naar-vandaag" data-naar-vandaag hidden>Naar deze week</button>` : ''}
+  </section>`;
+}
+
+export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = localStorage, gekozen = null, rustdag: gekozenRust = null } = {}) {
   const plan = huidigPlan(profiel, vandaag, opslag);
   const resultaten = laadResultaten(opslag);
   const alle = plan.weken.flatMap((w) => w.trainingen);
   const deWeek = plan.weken.find((w) => vandaag >= w.maandag && vandaag <= plusDagen(w.maandag, 6));
-  const strookWeek = deWeek ?? (vandaag < plan.weken[0].maandag ? plan.weken[0] : null);
   const gemist = deWeek ? deWeek.trainingen.filter((t) => t.datum < vandaag && !resultaten[t.id]) : [];
   // Wat vandaag gelopen is, ook als die training voor een andere dag gepland stond.
   const vandaagGedaan = alle.filter((t) => resultaten[t.id]?.status === 'gedaan' && resultaten[t.id].datum === vandaag);
@@ -96,11 +125,24 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
   const keuzeT = gekozen && gekozen !== volgende?.training.id ? alle.find((x) => x.id === gekozen) : null;
   const toon = keuzeT ? { training: keuzeT, week: plan.weken.find((w) => w.trainingen.includes(keuzeT)), isVandaag: keuzeT.datum === vandaag } : volgende;
   const opnieuw = (extra = {}) => toonVandaag(root, profiel, { vandaag, opslag, ...extra });
+  const weekVan = (datum) => plan.weken.find((w) => datum >= w.maandag && datum <= plusDagen(w.maandag, 6));
+  // Welke week de kalender toont: de gekozen dag, anders deze week zolang daar nog iets open staat,
+  // en als alles van deze week af is de week van je volgende training.
+  const openDezeWeek = deWeek?.trainingen.some((t) => !resultaten[t.id]);
+  const kalWeek = (gekozenRust && weekVan(gekozenRust)) || (keuzeT && toon.week)
+    || (openDezeWeek ? deWeek : null) || toon?.week || deWeek || plan.weken.at(-1);
+  const gekozenDag = gekozenRust ?? toon?.training.datum ?? null;
 
   root.onclick = (e) => {
     const knop = e.target.closest('button');
     if (knop?.dataset.toon) {
-      opnieuw({ gekozen: knop.dataset.toon === toon?.training.id ? null : knop.dataset.toon });
+      opnieuw({ gekozen: knop.dataset.toon === toon?.training.id && !gekozenRust ? null : knop.dataset.toon });
+    } else if (knop?.dataset.dag) {
+      opnieuw({ rustdag: knop.dataset.dag === gekozenRust ? null : knop.dataset.dag });
+    } else if (knop?.dataset.week) {
+      bladerNaar(huidigeIndex() + Number(knop.dataset.week));
+    } else if (knop?.hasAttribute('data-naar-vandaag')) {
+      bladerNaar(plan.weken.indexOf(deWeek));
     } else if (knop?.dataset.verplaats) {
       const voor = laadAanpassingen(opslag);
       bewaarAanpassingen(opslag, verplaats(plan, voor, knop.dataset.verplaats, knop.dataset.naar));
@@ -118,8 +160,42 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
     }
   };
 
-  const kop = `<p class="groet" data-test="datumkop">${datumKop(plan, strookWeek, vandaag)}</p><h1>Vandaag</h1>
-    ${strookWeek ? weekstrookHtml(strookWeek, resultaten, vandaag, toon?.training.id) : ''}`;
+  let kal = kalenderHtml(plan, kalWeek, vandaag);
+  for (const w of plan.weken) kal = kal.replace(`__WEEK_${w.maandag}__`, weekHtml(w, resultaten, vandaag, gekozenDag));
+  const kop = `<p class="groet" data-test="datumkop">${datumKop(vandaag)}</p><h1>Vandaag</h1>${kal}`;
+  const overzicht = `<section class="kaart weekoverzicht" data-test="weekoverzicht">${overzichtHtml(plan, kalWeek, resultaten)}</section>`;
+
+  // Na het tekenen: de kalender op de juiste week zetten en bij vegen kop en overzicht bijwerken.
+  let baan = null;
+  const huidigeIndex = () => (baan ? Math.round(baan.scrollLeft / baan.clientWidth) : plan.weken.indexOf(kalWeek));
+  const bladerNaar = (i) => {
+    if (!baan) return;
+    const doel = Math.max(0, Math.min(plan.weken.length - 1, i));
+    baan.scrollTo({ left: doel * baan.clientWidth, behavior: 'smooth' });
+  };
+  const bijWeek = () => {
+    const i = huidigeIndex();
+    const w = plan.weken[i];
+    if (!w) return;
+    root.querySelector('[data-test=weeknaam]').textContent = weekNaam(plan, w);
+    root.querySelector('[data-week="-1"]').disabled = i === 0;
+    root.querySelector('[data-week="1"]').disabled = i === plan.weken.length - 1;
+    const naarVandaag = root.querySelector('[data-naar-vandaag]');
+    if (naarVandaag) naarVandaag.hidden = w === deWeek;
+    const ov = root.querySelector('[data-test=weekoverzicht]');
+    if (ov && ov.dataset.week !== w.maandag) { ov.innerHTML = overzichtHtml(plan, w, resultaten); ov.dataset.week = w.maandag; }
+  };
+  const koppelKalender = () => {
+    baan = root.querySelector('.weekbaan');
+    if (!baan) return;
+    root.querySelector('[data-test=weekoverzicht]')?.setAttribute('data-week', kalWeek.maandag);
+    const zet = () => { baan.scrollLeft = plan.weken.indexOf(kalWeek) * baan.clientWidth; bijWeek(); };
+    zet();
+    // Breedte kan nog veranderen (lettertype, draaien): blijf op dezelfde week.
+    requestAnimationFrame(zet);
+    let wacht = null;
+    baan.addEventListener('scroll', () => { clearTimeout(wacht); wacht = setTimeout(bijWeek, 60); }, { passive: true });
+  };
 
   const gedaanHtml = vandaagGedaan.map((t) => {
     const r = resultaten[t.id];
@@ -130,7 +206,23 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
   if (!toon) {
     root.innerHTML = `${kop}${gedaanHtml}
       <div class="kaart"><p>Je schema zit erop. Gefeliciteerd met je ${plan.doelNaam}!</p></div>
-      ${gemistHtml(gemist, deWeek ?? plan.weken.at(-1), vandaag)}`;
+      ${gemistHtml(gemist, deWeek ?? plan.weken.at(-1), vandaag)}${overzicht}`;
+    koppelKalender();
+    return;
+  }
+  // Een rustdag aangetikt: geen training, wel de weg terug naar je volgende.
+  if (gekozenRust) {
+    const d = naarDatum(gekozenRust);
+    const wanneer = gekozenRust === vandaag ? 'Vandaag' : `${hoofdletter(DAGNAAM[dagVan(gekozenRust)])} ${d.getUTCDate()} ${MAANDEN[d.getUTCMonth()]}`;
+    root.innerHTML = `${kop}
+      <article class="kaart rust-kaart" data-test="rustdag-kaart">
+        <div class="stapnr">${wanneer}</div>
+        <h2>Rustdag</h2>
+        <p class="uitleg">Geen training gepland. Herstellen hoort bij je schema: je benen worden sterker op de dagen dat je niet loopt.</p>
+      </article>
+      <button type="button" class="secundair breed" data-toon="${volgende?.training.id ?? '-'}">Terug naar je volgende training</button>
+      ${overzicht}`;
+    koppelKalender();
     return;
   }
   const { training: t, week, isVandaag } = toon;
@@ -173,5 +265,7 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
     </article>
     ${keuzeT ? '<button type="button" class="secundair breed" data-toon="' + (volgende?.training.id ?? '-') + '">Terug naar je volgende training</button>' : ''}
     ${keuzeT ? '' : gemistHtml(gemist, deWeek, vandaag)}
+    ${overzicht}
     <p class="hint" data-test="tot-doel">Nog ${totDoel} ${totDoel === 1 ? 'dag' : 'dagen'} tot je ${plan.doelNaam} op ${datumTekst(plan.doelDatum)}.</p>`;
+  koppelKalender();
 }
