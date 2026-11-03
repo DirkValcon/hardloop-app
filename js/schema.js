@@ -18,7 +18,7 @@ export const SJABLOON_5_10 = {
   kwaliteit: [
     { vorm: 'intervallen', naam: '6 × 400 m op 5 km-tempo', herhaal: 6, meters: 400, zone: 'tempo5', herstelSec: 90 },
     { vorm: 'tempo', naam: '2 × 8 min op 10 km-tempo', herhaal: 2, sec: 480, zone: 'tempo10', herstelSec: 180 },
-    { vorm: 'fartlek', naam: 'Fartlek: 8 × 1 min snel / 1 min rustig', herhaal: 8, sec: 60, zone: 'snel', herstelSec: 60 },
+    { vorm: 'fartlek', naam: 'Fartlek: 8 × 1 min snel / 1 min herstel', herhaal: 8, sec: 60, zone: 'snel', herstelSec: 60 },
     { vorm: 'tijdsblokken', naam: '5 × 2 min op 5 km-tempo', herhaal: 5, sec: 120, zone: 'tempo5', herstelSec: 90 },
     { vorm: 'intervallen', naam: '5 × 800 m op 5 km-tempo', herhaal: 5, meters: 800, zone: 'tempo5', herstelSec: 120 },
     { vorm: 'tempo', naam: '2 × 12 min op 10 km-tempo', herhaal: 2, sec: 720, zone: 'tempo10', herstelSec: 180 },
@@ -63,7 +63,7 @@ function maakBouwer(zones, helling) {
 }
 
 function kernKwaliteit(def, b) {
-  const herstel = (sec, i) => b.blok('herstel', 'Herstel', b.z.rustig.van, sec, { herhaling: i });
+  const herstel = (sec, i) => b.blok('herstel', 'Herstel', b.z.herstel.van, sec, { herhaling: i });
   const blokken = [];
   if (def.piramide) {
     def.piramide.forEach((sec, i) => {
@@ -176,7 +176,7 @@ export function maakPlan(profiel, { sjabloon = sjabloonVoor(profiel), vandaag = 
           const kern = [b.opAfstand('rustig', 'Rustig', b.midden('rustig'), sjabloon.basis.rustig * 1000)];
           for (let r = 1; r <= v.herhaal; r++) {
             kern.push(b.blok('interval', 'Versnelling', b.z.snel.van, v.sec, { herhaling: r, van: v.herhaal }));
-            kern.push(b.blok('herstel', 'Herstel', b.z.rustig.van, v.herstelSec, { herhaling: r }));
+            kern.push(b.blok('herstel', 'Herstel', b.z.herstel.van, v.herstelSec, { herhaling: r }));
           }
           return { id, datum, dag, ...training('rustig', `Rustig ${String(sjabloon.basis.rustig).replace('.', ',')} km + ${v.herhaal} versnellingen`, kern, b) };
         }

@@ -27,3 +27,9 @@ test('zwaarder lichaam en meer helling geven meer calorieën voor dezelfde train
   const steil = { ...t, blokken: t.blokken.map((b) => ({ ...b, helling: 4 })) };
   assert.ok(kcalTraining(steil, 80) > basis);
 });
+
+test('herstel op wandelsnelheid telt als wandelen, hardere herstel als lopen', () => {
+  const blok = (kmh) => ({ soort: 'herstel', kmh, helling: 0, duurSec: 600 });
+  assert.ok(kcalBlok(blok(5.5), 80) < kcalBlok({ ...blok(5.5), soort: 'rustig' }, 80));
+  assert.equal(kcalBlok(blok(8), 80), kcalBlok({ ...blok(8), soort: 'rustig' }, 80));
+});

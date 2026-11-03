@@ -66,7 +66,7 @@ try {
   assert.equal(await lees('bloktitel'), '5 km-tempo 1 van 6');
   assert.equal(await lees('snelheid'), '8,9');
   assert.match(await lees('tempo'), /400 m/);
-  assert.match(await lees('volgende'), /Hierna: Herstel 1, 6,9 km\/u|Hierna: Herstel, 6,9 km\/u/);
+  assert.match(await lees('volgende'), /Hierna: Herstel 1, 5,5 km\/u|Hierna: Herstel, 5,5 km\/u/);
   await shot('story6-interval');
 
   // Herladen tijdens de training: hij loopt door bij hetzelfde blok.

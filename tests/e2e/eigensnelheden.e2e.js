@@ -12,6 +12,8 @@ try {
   await page.getByRole('button', { name: 'Opslaan' }).click();
   assert.match(await tekst('.eigen-rij .foutmelding'), /tussen 3 en 25/);
   await page.fill('#eigen-rustig', '8,5');
+  assert.equal(await page.getAttribute('#eigen-herstel', 'placeholder'), '5,5');
+  await page.fill('#eigen-herstel', '5,0');
   await page.fill('#eigen-tempo5', '9,2');
   await page.fill('#eigen-snel', '9,2');
   await shot('verbetering-eigen-snelheden');
@@ -19,6 +21,7 @@ try {
   await page.waitForSelector('[data-test=samenvatting]');
   assert.match(await tekst('[data-zone=rustig]'), /Rustig eigen.*8,5 km\/u 7:04 \/km/);
   assert.match(await tekst('[data-zone=tempo5]'), /eigen.*9,2 km\/u/);
+  assert.match(await tekst('[data-zone=herstel]'), /Herstel eigen.*5,0 km\/u 12:00 \/km/);
   assert.doesNotMatch(await tekst('[data-zone=tempo10]'), /eigen/);
 
   // Vandaag (dinsdag, week 1) gebruikt de eigen rustige snelheid.
@@ -30,6 +33,7 @@ try {
   await page.getByRole('link', { name: 'Profiel' }).click();
   await page.getByRole('button', { name: 'Snelheden aanpassen' }).click();
   assert.equal(await page.inputValue('#eigen-rustig'), '8,5');
+  assert.equal(await page.inputValue('#eigen-herstel'), '5,0');
   assert.equal(await page.inputValue('#eigen-tempo10'), '');
   assert.deepEqual(fouten, []);
   console.log('✓ verbetering 3b: eigen snelheden per zone');

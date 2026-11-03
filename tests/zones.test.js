@@ -63,3 +63,12 @@ test('eigen snelheden gaan voor de berekende', () => {
   assert.equal(z.tempo10.van, 8.6); // niet ingevuld: berekend
   assert.equal(z.tempo10.eigen, undefined);
 });
+
+test('herstel is een eigen zone: standaard wandelen, los van rustig in te stellen', () => {
+  const z = opId(berekenZones(2100, 4200, { rustig: 8.5 }));
+  assert.equal(z.rustig.van, 8.5);
+  assert.equal(z.herstel.van, 5.5); assert.equal(z.herstel.eigen, undefined);
+  const eigen = opId(berekenZones(2100, 4200, { rustig: 8.5, herstel: 6 }));
+  assert.equal(eigen.herstel.van, 6); assert.equal(eigen.herstel.eigen, true);
+  assert.equal(eigen.rustig.van, 8.5);
+});

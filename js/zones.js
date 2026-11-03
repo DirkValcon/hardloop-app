@@ -32,10 +32,11 @@ export function beoordeelDoeltijd(vijfKmSeconden, doelSeconden) {
 }
 
 // Zones waarvoor je onder Profiel een eigen snelheid kunt instellen.
-export const EIGEN_ZONES = ['rustig', 'tempo10', 'tempo5', 'snel'];
+export const EIGEN_ZONES = ['rustig', 'herstel', 'tempo10', 'tempo5', 'snel'];
 
 // De snelle zones rekenen met het niveau dat je wilt halen (je doeltijd, hooguit 5% sneller dan
 // voorspeld); de rustige zones altijd met je huidige niveau, zodat duurlopen echt rustig blijven.
+// Herstel tussen intervallen is wandelen, los van de rustige duurloop.
 // Een eigen snelheid (bijvoorbeeld rustig 8,5 km/u) gaat altijd voor de berekende.
 export function berekenZones(vijfKmSeconden, doelSeconden = null, eigen = {}) {
   const nu5 = 5 / (vijfKmSeconden / 3600); // km/u
@@ -49,13 +50,15 @@ export function berekenZones(vijfKmSeconden, doelSeconden = null, eigen = {}) {
     ? { id, naam, gebruik, van: eigen[id], tot: eigen[id], eigen: true }
     : { id, naam, gebruik, van: rondSnelheid(van), tot: rondSnelheid(tot) });
   const joggen = nu5 * 0.71;
+  const wandelen = Math.min(WANDELSNELHEID, joggen - 0.5);
   return [
     zone('warmup', 'Warming-up', '10 min, rustig oplopend', joggen, nu5 * 0.8),
-    zone('rustig', 'Rustig', 'Duurloop, lange loop, herstel', nu5 * 0.8, nu5 * 0.855),
+    zone('rustig', 'Rustig', 'Duurloop, lange loop', nu5 * 0.8, nu5 * 0.855),
+    zone('herstel', 'Herstel', 'Wandelen tussen intervallen en versnellingen', wandelen),
     zone('tempo10', '10 km-tempo', 'Tempoblokken', v10),
     zone('tempo5', '5 km-tempo', 'Intervallen 400 m – 1 km', v5),
     zone('snel', 'Snel', 'Korte versnellingen, fartlek', v5 * 1.036),
     zone('uitjoggen', 'Uitjoggen', 'Cooling-down, eerste deel', joggen),
-    zone('uitwandelen', 'Uitwandelen', 'Cooling-down, laatste deel', Math.min(WANDELSNELHEID, joggen - 0.5)),
+    zone('uitwandelen', 'Uitwandelen', 'Cooling-down, laatste deel', wandelen),
   ];
 }
