@@ -5,6 +5,7 @@
 // - een andere doeldatum verschuift het hele schema.
 // Zolang het schema nog niet begonnen is, wordt alles meteen in het profiel zelf gezet.
 import { valideerVeld, extraWeken, DAGEN, schemaWeken } from './profiel.js';
+import { MIN_WEKEN, MAX_WEKEN } from './generator.js';
 import { parseTijd } from './tijd.js';
 import { maandagVan, profielVoorWeek, maakPlan } from './schema.js';
 import { plusDagen } from './datum.js';
@@ -29,12 +30,28 @@ export function leesEigenSnelheden(invoer) {
   return eigen;
 }
 
+// Aantal weken uit het formulier; alleen een eigen (gegenereerd) schema kan langer of korter.
+export function gekozenWeken(profiel, invoer) {
+  if (!profiel.schema || invoer.weken == null || String(invoer.weken).trim() === '') return schemaWeken(profiel);
+  return getal(invoer.weken);
+}
+
 export function valideerWijziging(profiel, invoer, vandaag) {
-  invoer = { ...invoer, weken: schemaWeken(profiel), doelAfstand: 10 };
+  const weken = gekozenWeken(profiel, invoer);
+  invoer = { ...invoer, weken, doelAfstand: 10 };
   // Bij een eigen schema horen niveau en doeltijd bij het schema: die wijzig je met een nieuw schema.
   const velden = [...(profiel.schema ? [] : ['vijfKmTijd', 'doelTijd']), 'trainingsdagen', 'gewicht', 'helling'];
-  if (invoer.doelDatum !== profiel.doelDatum) velden.push('doelDatum', 'extraWekenKeuze');
   const fouten = {};
+  if (weken !== schemaWeken(profiel) && (!Number.isInteger(weken) || weken < MIN_WEKEN || weken > MAX_WEKEN)) {
+    fouten.weken = `Kies ${MIN_WEKEN} tot ${MAX_WEKEN} weken.`;
+  }
+  // Startweek en duur mogen veranderen, ook als het schema al begonnen is (week 1 mag in het
+  // verleden liggen). Alleen de doeldatum zelf moet nog komen.
+  if (!fouten.weken && (invoer.doelDatum !== profiel.doelDatum || weken !== schemaWeken(profiel))) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(invoer.doelDatum ?? '')) fouten.doelDatum = 'Kies een doeldatum.';
+    else if (invoer.doelDatum < vandaag) fouten.doelDatum = 'De doeldatum ligt in het verleden: kies vandaag of later.';
+    else velden.push('extraWekenKeuze');
+  }
   for (const v of velden) {
     const fout = valideerVeld(v, invoer, vandaag);
     if (fout) fouten[v] = fout;
@@ -56,9 +73,13 @@ export function wijzigProfiel(profiel, invoer, vandaag) {
     eigenSnelheden: leesEigenSnelheden(invoer),
   };
   let resultaat = { ...profiel, gewicht: Number(invoer.gewicht) };
+  const weken = gekozenWeken(profiel, invoer);
+  // Andere duur: het schema wordt opnieuw opgebouwd, met hetzelfde schema-id zodat afgevinkte
+  // trainingen per week gekoppeld blijven.
+  if (weken !== schemaWeken(profiel)) resultaat.schema = { ...profiel.schema, weken };
 
-  if (invoer.doelDatum !== profiel.doelDatum) {
-    const extra = extraWeken(vandaag, invoer.doelDatum, schemaWeken(profiel));
+  if (invoer.doelDatum !== profiel.doelDatum || weken !== schemaWeken(profiel)) {
+    const extra = extraWeken(vandaag, invoer.doelDatum, weken);
     const keuze = extra > 0 ? invoer.extraWekenKeuze : null;
     resultaat = { ...resultaat, doelDatum: invoer.doelDatum, extraWeken: extra, extraWekenKeuze: keuze };
     // Nieuw gekozen basisweken beginnen deze week.
