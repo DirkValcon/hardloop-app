@@ -128,7 +128,7 @@ function maakLangeLopen(doelKm, maxKm, weken) {
 
 // Kwaliteitstrainingen, oplopend in zwaarte. Bij langere doelen langere tempoblokken.
 const KORT = [
-  { vorm: 'fartlek', naam: 'Fartlek: 6 × 1 min snel / 1 min rustig', herhaal: 6, sec: 60, zone: 'snel', herstelSec: 60 },
+  { vorm: 'fartlek', naam: 'Fartlek: 6 × 1 min snel / 1 min herstel', herhaal: 6, sec: 60, zone: 'snel', herstelSec: 60 },
   { vorm: 'intervallen', naam: '6 × 400 m op 5 km-tempo', herhaal: 6, meters: 400, zone: 'tempo5', herstelSec: 90 },
   { vorm: 'tempo', naam: '2 × 8 min op 10 km-tempo', herhaal: 2, sec: 480, zone: 'tempo10', herstelSec: 180 },
   { vorm: 'tijdsblokken', naam: '5 × 2 min op 5 km-tempo', herhaal: 5, sec: 120, zone: 'tempo5', herstelSec: 90 },
@@ -146,7 +146,7 @@ const LANG = [
   { vorm: 'progressief', naam: 'Progressief: 30 min, elke 6 min +0,3 km/u', stappen: 5, sec: 360, stap: 0.3, zone: 'tempo10' },
 ];
 const LICHT = { vorm: 'intervallen', naam: '4 × 400 m losjes op 5 km-tempo', herhaal: 4, meters: 400, zone: 'tempo5', herstelSec: 90 };
-const HERSTEL = { vorm: 'fartlek', naam: 'Fartlek: 6 × 30 s snel / 90 s rustig', herhaal: 6, sec: 30, zone: 'snel', herstelSec: 90 };
+const HERSTEL = { vorm: 'fartlek', naam: 'Fartlek: 6 × 30 s snel / 90 s herstel', herhaal: 6, sec: 30, zone: 'snel', herstelSec: 90 };
 
 function kiesKwaliteit(def, soorten) {
   const reeks = def.km > 10 ? [...KORT.slice(0, 6), ...LANG, ...KORT.slice(6)] : KORT;

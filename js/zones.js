@@ -31,12 +31,34 @@ export function beoordeelDoeltijd(vijfKmSeconden, doelSeconden) {
   return { niveau: 'te-snel', voorspeld, sneller };
 }
 
-// Zones waarvoor je onder Profiel een eigen snelheid kunt instellen.
-export const EIGEN_ZONES = ['rustig', 'tempo10', 'tempo5', 'snel'];
+// Drie snelheden die je onder Profiel zelf instelt. Elke snelheid geldt voor een groep blokken.
+export const SNELHEDEN = [
+  { id: 'langzaam', naam: 'Langzaam', gebruik: 'Warming-up en uitjoggen', zones: ['warmup', 'uitjoggen'] },
+  { id: 'normaal', naam: 'Normaal', gebruik: 'Duurloop, lange loop en herstel tussen blokken', zones: ['rustig', 'herstel'] },
+  { id: 'hard', naam: 'Hard', gebruik: 'Intervallen, tempo, fartlek en versnellingen', zones: ['tempo10', 'tempo5', 'snel'] },
+  { id: 'wandelen', naam: 'Wandelen', gebruik: 'Uitwandelen aan het eind', zones: ['uitwandelen'] },
+];
+export const EIGEN_ZONES = ['langzaam', 'normaal', 'hard'];
+export const groepVanZone = (zoneId) => SNELHEDEN.find((g) => g.zones.includes(zoneId));
+
+// Eigen snelheden van vóór de drie groepen (rustig, tempo10, tempo5, snel) tellen gewoon mee.
+export function normaliseerEigen(eigen = {}) {
+  const e = eigen ?? {};
+  const uit = {};
+  const langzaam = e.langzaam;
+  const normaal = e.normaal ?? e.rustig;
+  const hard = e.hard ?? e.tempo10 ?? e.tempo5 ?? e.snel;
+  if (langzaam) uit.langzaam = langzaam;
+  if (normaal) uit.normaal = normaal;
+  if (hard) uit.hard = hard;
+  return uit;
+}
+
+const WARMUP_OPLOPEN = 0.8; // km/u: de warming-up loopt in drie stappen op naar langzaam
 
 // De snelle zones rekenen met het niveau dat je wilt halen (je doeltijd, hooguit 5% sneller dan
 // voorspeld); de rustige zones altijd met je huidige niveau, zodat duurlopen echt rustig blijven.
-// Een eigen snelheid (bijvoorbeeld rustig 8,5 km/u) gaat altijd voor de berekende.
+// Een eigen snelheid (langzaam, normaal, hard) gaat altijd voor de berekende.
 export function berekenZones(vijfKmSeconden, doelSeconden = null, eigen = {}) {
   const nu5 = 5 / (vijfKmSeconden / 3600); // km/u
   const voorspeld10 = voorspelTijd(vijfKmSeconden, 5, 10);
@@ -44,18 +66,38 @@ export function berekenZones(vijfKmSeconden, doelSeconden = null, eigen = {}) {
   const doel5 = voorspelTijd(doel10, 10, 5);
   const v10 = 10 / (doel10 / 3600);
   const v5 = 5 / (doel5 / 3600);
+  const e = normaliseerEigen(eigen);
 
-  const zone = (id, naam, gebruik, van, tot = van) => (eigen?.[id]
-    ? { id, naam, gebruik, van: eigen[id], tot: eigen[id], eigen: true }
-    : { id, naam, gebruik, van: rondSnelheid(van), tot: rondSnelheid(tot) });
+  const zone = (id, naam, gebruik, van, tot = van) => {
+    const groep = groepVanZone(id);
+    const v = e[groep.id];
+    if (!v) return { id, naam, gebruik, groep: groep.id, van: rondSnelheid(van), tot: rondSnelheid(tot) };
+    // Warming-up blijft oplopend, eindigend op je langzame snelheid.
+    const vanEigen = id === 'warmup' ? rondSnelheid(Math.max(3, v - WARMUP_OPLOPEN)) : v;
+    return { id, naam, gebruik, groep: groep.id, van: vanEigen, tot: v, eigen: true };
+  };
   const joggen = nu5 * 0.71;
   return [
     zone('warmup', 'Warming-up', '10 min, rustig oplopend', joggen, nu5 * 0.8),
-    zone('rustig', 'Rustig', 'Duurloop, lange loop, herstel', nu5 * 0.8, nu5 * 0.855),
+    zone('rustig', 'Rustig', 'Duurloop, lange loop', nu5 * 0.8, nu5 * 0.855),
+    zone('herstel', 'Herstel', 'Tussen intervallen en versnellingen', nu5 * 0.8),
     zone('tempo10', '10 km-tempo', 'Tempoblokken', v10),
     zone('tempo5', '5 km-tempo', 'Intervallen 400 m – 1 km', v5),
     zone('snel', 'Snel', 'Korte versnellingen, fartlek', v5 * 1.036),
     zone('uitjoggen', 'Uitjoggen', 'Cooling-down, eerste deel', joggen),
     zone('uitwandelen', 'Uitwandelen', 'Cooling-down, laatste deel', Math.min(WANDELSNELHEID, joggen - 0.5)),
   ];
+}
+
+// De vier snelheden zoals je ze ziet: per groep het bereik van de zones die erbij horen.
+export function berekenSnelheden(vijfKmSeconden, doelSeconden = null, eigen = {}) {
+  const zones = berekenZones(vijfKmSeconden, doelSeconden, eigen);
+  return SNELHEDEN.map((g) => {
+    const z = zones.filter((x) => x.groep === g.id);
+    const eigenWaarde = z.some((x) => x.eigen);
+    // Bij langzaam telt de top van de warming-up: dat is de snelheid die je instelt.
+    const van = eigenWaarde ? z[0].tot : Math.min(...z.map((x) => x.van));
+    const tot = eigenWaarde ? z[0].tot : Math.max(...z.map((x) => x.tot));
+    return { id: g.id, naam: g.naam, gebruik: g.gebruik, van, tot, ...(eigenWaarde ? { eigen: true } : {}) };
+  });
 }

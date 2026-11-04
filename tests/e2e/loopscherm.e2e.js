@@ -20,8 +20,8 @@ try {
   assert.equal(await lees('snelheid'), '6,1');
   assert.equal(await lees('helling'), '1');
   assert.equal(await lees('timer'), '4:00');
-  assert.match(await lees('tempo'), /9:50 \/km/);
-  assert.match(await lees('volgende'), /^Hierna: Warming-up 2 van 3, 6,5 km\/u$/);
+  assert.match(await lees('tempo'), /^Langzaam · 9:50 \/km/);
+  assert.match(await lees('volgende'), /^Hierna: Warming-up 2 van 3, langzaam 6,5 km\/u$/);
 
   // Aftellen.
   await tijd(60_000);
@@ -29,7 +29,7 @@ try {
 
   // 10 s voor het eind: aankondiging.
   await tijd(170_000);
-  assert.match(await lees('volgende'), /^Over 10 s: Warming-up 2 van 3, 6,5 km\/u$/);
+  assert.match(await lees('volgende'), /^Over 10 s: Warming-up 2 van 3, langzaam 6,5 km\/u$/);
   assert.equal(await page.locator('.loop-volgende.is-aankondiging').count(), 1);
 
   // Volgend blok.
@@ -65,8 +65,8 @@ try {
   await page.getByRole('button', { name: 'Volgend blok' }).click();
   assert.equal(await lees('bloktitel'), '5 km-tempo 1 van 6');
   assert.equal(await lees('snelheid'), '8,9');
-  assert.match(await lees('tempo'), /400 m/);
-  assert.match(await lees('volgende'), /Hierna: Herstel 1, 6,9 km\/u|Hierna: Herstel, 6,9 km\/u/);
+  assert.match(await lees('tempo'), /^Hard · .*400 m/);
+  assert.match(await lees('volgende'), /Hierna: Herstel( 1)?, normaal 6,9 km\/u/);
   await shot('story6-interval');
 
   // Herladen tijdens de training: hij loopt door bij hetzelfde blok.

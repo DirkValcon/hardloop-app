@@ -11,11 +11,10 @@ import { opzet, DIRK } from './helpers.js';
     assert.equal(await melding.getAttribute('data-niveau'), 'ambitieus');
     assert.match(await melding.textContent(), /4% sneller dan je voorspelde 1:12:58/);
     const kmh = async (zone) => (await page.locator(`[data-zone=${zone}] td`).textContent()).replace(/\s+/g, ' ').trim();
-    assert.match(await kmh('rustig'), /^6,9–7,3 km\/u 8:42–8:13 \/km$/);
-    assert.match(await kmh('tempo10'), /^8,6 km\/u 6:59 \/km$/);
-    assert.match(await kmh('tempo5'), /^8,9 km\/u/);
-    assert.match(await kmh('warmup'), /^6,1–6,9 km\/u/);
-    assert.match(await kmh('uitwandelen'), /^5,5 km\/u/);
+    assert.match(await kmh('normaal'), /^6,9–7,3 km\/u 8:42–8:13 \/km$/);
+    assert.match(await kmh('hard'), /^8,6–9,3 km\/u 6:59–/);
+    assert.match(await kmh('langzaam'), /^6,1–6,9 km\/u/);
+    assert.match(await kmh('wandelen'), /^5,5 km\/u/);
     await shot('story2-zones');
     assert.deepEqual(fouten, []);
   } finally { await sluit(); }

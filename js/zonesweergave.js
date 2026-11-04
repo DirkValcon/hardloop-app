@@ -1,6 +1,6 @@
 // Weergave van zones en de beoordeling van de doeltijd, gedeeld door onboarding en overzicht.
 import { formatTijd } from './tijd.js';
-import { tempoPerKm, beoordeelDoeltijd, berekenZones } from './zones.js';
+import { tempoPerKm, beoordeelDoeltijd, berekenSnelheden } from './zones.js';
 import { doelafstand, beoordeelDoel } from './generator.js';
 
 const kmh = (v) => v.toFixed(1).replace('.', ',');
@@ -20,7 +20,7 @@ export function haalbaarheidHtml(vijfKmSeconden, doelSeconden) {
 }
 
 export function zonesHtml(vijfKmSeconden, doelSeconden, eigen = {}) {
-  const rijen = berekenZones(vijfKmSeconden, doelSeconden, eigen).map((z) => `
+  const rijen = berekenSnelheden(vijfKmSeconden, doelSeconden, eigen).map((z) => `
     <tr data-zone="${z.id}">
       <th scope="row">${z.naam}${z.eigen ? ' <span class="badge">eigen</span>' : ''}<small>${z.gebruik}</small></th>
       <td><span class="kmh">${z.van === z.tot ? kmh(z.van) : `${kmh(z.van)}–${kmh(z.tot)}`}</span> km/u

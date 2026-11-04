@@ -7,19 +7,20 @@ const tekst = async (sel) => (await page.textContent(sel)).replace(/\s+/g, ' ').
 try {
   await page.goto(url + '#profiel');
   await page.getByRole('button', { name: 'Snelheden aanpassen' }).click();
-  assert.equal(await page.getAttribute('#eigen-rustig', 'placeholder'), '6,9');
-  await page.fill('#eigen-rustig', '85');
+  assert.equal(await page.getAttribute('#eigen-normaal', 'placeholder'), '6,9');
+  await page.fill('#eigen-normaal', '85');
   await page.getByRole('button', { name: 'Opslaan' }).click();
   assert.match(await tekst('.eigen-rij .foutmelding'), /tussen 3 en 25/);
-  await page.fill('#eigen-rustig', '8,5');
-  await page.fill('#eigen-tempo5', '9,2');
-  await page.fill('#eigen-snel', '9,2');
+  await page.fill('#eigen-normaal', '8,5');
+  await page.fill('#eigen-langzaam', '7');
+  await page.fill('#eigen-hard', '10');
   await shot('verbetering-eigen-snelheden');
   await page.getByRole('button', { name: 'Opslaan' }).click();
   await page.waitForSelector('[data-test=samenvatting]');
-  assert.match(await tekst('[data-zone=rustig]'), /Rustig eigen.*8,5 km\/u 7:04 \/km/);
-  assert.match(await tekst('[data-zone=tempo5]'), /eigen.*9,2 km\/u/);
-  assert.doesNotMatch(await tekst('[data-zone=tempo10]'), /eigen/);
+  assert.match(await tekst('[data-zone=normaal]'), /Normaal eigen.*herstel.*8,5 km\/u 7:04 \/km/);
+  assert.match(await tekst('[data-zone=hard]'), /Hard eigen.*10,0 km\/u 6:00 \/km/);
+  assert.match(await tekst('[data-zone=langzaam]'), /Langzaam eigen.*7,0 km\/u/);
+  assert.doesNotMatch(await tekst('[data-zone=wandelen]'), /eigen/);
 
   // Vandaag (dinsdag, week 1) gebruikt de eigen rustige snelheid.
   await page.getByRole('link', { name: 'Vandaag' }).click();
@@ -29,8 +30,8 @@ try {
   // Wijzigen opnieuw openen: de eigen waarden staan erin.
   await page.getByRole('link', { name: 'Profiel' }).click();
   await page.getByRole('button', { name: 'Snelheden aanpassen' }).click();
-  assert.equal(await page.inputValue('#eigen-rustig'), '8,5');
-  assert.equal(await page.inputValue('#eigen-tempo10'), '');
+  assert.equal(await page.inputValue('#eigen-normaal'), '8,5');
+  assert.equal(await page.inputValue('#eigen-hard'), '10,0');
   assert.deepEqual(fouten, []);
   console.log('✓ verbetering 3b: eigen snelheden per zone');
 } finally { await sluit(); }

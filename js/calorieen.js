@@ -2,6 +2,7 @@
 // We tellen alleen het actieve verbruik (zonder rustverbruik), net als "actieve calorieën" op een Apple Watch.
 
 const KCAL_PER_LITER_O2 = 5;
+const WANDELGRENS = 6.5; // km/u: herstel op of onder deze snelheid is wandelen
 
 // Netto zuurstofverbruik in ml/kg/min.
 export function vo2Netto(kmh, hellingProcent, wandelen = false) {
@@ -11,7 +12,7 @@ export function vo2Netto(kmh, hellingProcent, wandelen = false) {
 }
 
 export function kcalBlok(blok, gewicht) {
-  const vo2 = vo2Netto(blok.kmh, blok.helling, blok.soort === 'uitwandelen');
+  const vo2 = vo2Netto(blok.kmh, blok.helling, blok.soort === 'uitwandelen' || (blok.soort === 'herstel' && blok.kmh <= WANDELGRENS));
   return (vo2 * gewicht / 1000) * KCAL_PER_LITER_O2 * (blok.duurSec / 60);
 }
 
