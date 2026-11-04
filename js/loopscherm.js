@@ -41,14 +41,38 @@ function maakGeluid() {
   // Lopende uitspraken bewaren: anders ruimt de browser ze soms op vóór ze klinken.
   const wachtrij = new Set();
   let laatsteStart = 0;
+  let vrijgeefTimer = null;
+  let piepTot = 0;
 
-  // iPhone: zonder 'playback' zet de stille-modusschakelaar al het webgeluid uit.
-  const zetAfspeelmodus = () => { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* oudere iOS */ } };
+  // iPhone: zonder 'playback' zet de stille-modusschakelaar al het webgeluid uit. Maar 'playback'
+  // pauzeert ook Spotify, en zolang wij het kanaal vasthouden gaat de muziek niet verder.
+  // Daarom: alleen claimen zolang er iets klinkt, en daarna weer loslaten.
+  const zetModus = (type) => { try { if (navigator.audioSession) navigator.audioSession.type = type; } catch { /* oudere iOS */ } };
+  const claim = () => {
+    clearTimeout(vrijgeefTimer);
+    vrijgeefTimer = null;
+    zetModus('playback');
+  };
 
   const wekContext = () => {
     if (!ctx) return;
     // iOS zet de context op 'suspended' of 'interrupted' na een scherm-uit of een melding.
     if (ctx.state !== 'running') ctx.resume?.().catch(() => {});
+  };
+
+  const bezig = () => wachtrij.size > 0 || Date.now() < piepTot
+    || (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending) && Date.now() - laatsteStart < 20000);
+
+  // Kanaal vrijgeven zodra alles gezegd is: context stil en sessie terug naar 'auto',
+  // zodat iOS andere apps (Spotify) laat weten dat ze verder kunnen spelen.
+  const geefVrij = (naMs = 800) => {
+    clearTimeout(vrijgeefTimer);
+    vrijgeefTimer = setTimeout(() => {
+      vrijgeefTimer = null;
+      if (bezig()) { geefVrij(500); return; }
+      try { if (ctx?.state === 'running') ctx.suspend?.().catch(() => {}); } catch { /* niets */ }
+      zetModus('auto');
+    }, naMs);
   };
 
   return {
@@ -57,7 +81,7 @@ function maakGeluid() {
     // Moet binnen een tik van de gebruiker gebeuren, anders blijft iOS stil. Mag vaker: elke tik
     // op het loopscherm ontgrendelt opnieuw (bijvoorbeeld na herladen midden in een training).
     ontgrendel() {
-      zetAfspeelmodus();
+      claim();
       try {
         ctx ??= new (window.AudioContext || window.webkitAudioContext)();
         wekContext();
@@ -76,11 +100,14 @@ function maakGeluid() {
           speechSynthesis.speak(u);
         }
       } catch { /* geen spraak */ }
+      geefVrij();
     },
-    wek: wekContext,
+    // Na terugkeer in de app alleen wekken als er net iets klinkt; anders blijft het kanaal vrij.
+    wek() { if (bezig()) wekContext(); },
     piep(aantal = 1, hoog = false) {
       navigator.vibrate?.(Array.from({ length: aantal * 2 - 1 }, (_, i) => (i % 2 ? 120 : 200)));
       if (!aan || !ctx) return;
+      claim();
       wekContext();
       for (let i = 0; i < aantal; i++) {
         const osc = ctx.createOscillator();
@@ -94,10 +121,13 @@ function maakGeluid() {
         osc.start(t);
         osc.stop(t + 0.25);
       }
+      piepTot = Math.max(piepTot, Date.now() + aantal * 300);
+      geefVrij();
     },
     zeg(tekst) {
       if (!aan || !window.speechSynthesis) return;
       try {
+        claim();
         // iOS-spraak kan vastlopen (blijft "bezig" zonder geluid). Hangt hij langer dan 20 s, dan opnieuw beginnen.
         if (speechSynthesis.speaking && Date.now() - laatsteStart > 20000) { speechSynthesis.cancel(); wachtrij.clear(); }
         if (speechSynthesis.paused) speechSynthesis.resume();
@@ -107,7 +137,9 @@ function maakGeluid() {
         if (stem) u.voice = stem;
         wachtrij.add(u);
         u.onstart = () => { laatsteStart = Date.now(); };
-        u.onend = u.onerror = () => wachtrij.delete(u);
+        u.onend = u.onerror = () => { wachtrij.delete(u); if (!wachtrij.size) geefVrij(); };
+        // Vangnet als iOS geen 'klaar' meldt: na een ruime schatting toch loslaten.
+        setTimeout(() => { if (wachtrij.delete(u) && !wachtrij.size) geefVrij(); }, 4000 + tekst.length * 120);
         if (!speechSynthesis.speaking) laatsteStart = Date.now();
         // Niet afbreken: een kilometertijd en een blokaankondiging mogen na elkaar komen.
         speechSynthesis.speak(u);
