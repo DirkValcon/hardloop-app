@@ -99,3 +99,32 @@ test('na het laatste blok loopt de training door: afstand groeit op de laatste s
   assert.equal(toestand(s, sec(181)).kmh, 8);
   assert.ok(Math.abs(toestand(s, sec(240)).afstandKm - toestand(s, sec(180)).afstandKm - 8 / 60) < 1e-9);
 });
+
+test('blok op afstand: sneller lopen maakt het blok korter, ook na herladen', async () => {
+  const { pasSnelheidAan, totaalMs } = await import('../js/speler.js');
+  // 1 km op 9 km/u = 400 s, daarna 60 s uitwandelen.
+  let s = start(maakSpeler([{ soort: 'rustig', kmh: 9, duurSec: 400, afstandM: 1000 }, { soort: 'uitwandelen', kmh: 6, duurSec: 60 }]), T0);
+  assert.equal(totaalMs(s), 460_000);
+  s = pasSnelheidAan(s, sec(200), 3); // halverwege (500 m) naar 12 km/u: rest 500 m in 150 s
+  assert.equal(toestand(s, sec(349)).index, 0);
+  assert.equal(toestand(s, sec(350)).index, 1);
+  assert.ok(Math.abs(toestand(s, sec(350)).afstandKm - 1) < 1e-9);
+  assert.equal(toestand(s, sec(200)).restBlokMs, 150_000);
+  assert.equal(toestand(s, sec(200)).restTotaalMs, 210_000);
+  // Herladen: alleen tijden, wijzigingen en overgeslagen worden bewaard.
+  const { gestartOp, pauzeOp, gepauzeerdMs, extraMs, wijzigingen, overgeslagen } = s;
+  const terug = { ...maakSpeler(s.blokken), gestartOp, pauzeOp, gepauzeerdMs, extraMs, wijzigingen, overgeslagen };
+  assert.equal(toestand(terug, sec(350)).index, 1);
+  // Trager lopen maakt het blok langer.
+  let t = start(maakSpeler([{ soort: 'rustig', kmh: 9, duurSec: 400, afstandM: 1000 }]), T0);
+  t = pasSnelheidAan(t, sec(0), -3);
+  assert.equal(totaalMs(t), 600_000);
+});
+
+test('overslaan in een blok op afstand springt naar het volgende blok', () => {
+  let s = start(maakSpeler([{ soort: 'rustig', kmh: 9, duurSec: 400, afstandM: 1000 }, { soort: 'uitwandelen', kmh: 6, duurSec: 60 }]), T0);
+  s = overslaan(s, sec(100));
+  const t = toestand(s, sec(110));
+  assert.equal(t.index, 1);
+  assert.equal(t.restBlokMs, 50_000);
+});

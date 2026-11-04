@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { berekenZones, beoordeelDoeltijd, voorspelTijd, tempoPerKm } from '../js/zones.js';
+import { berekenZones, berekenSnelheden, normaliseerEigen, beoordeelDoeltijd, voorspelTijd, tempoPerKm } from '../js/zones.js';
 
 const opId = (zones) => Object.fromEntries(zones.map((z) => [z.id, z]));
 const bijna = (a, b, marge = 0.1) => assert.ok(Math.abs(a - b) <= marge + 1e-9, `${a} ≠ ${b}`);
@@ -57,18 +57,31 @@ test('elke zone heeft een oplopende of gelijke snelheid en tempo klopt', () => {
 });
 
 test('eigen snelheden gaan voor de berekende', () => {
-  const z = opId(berekenZones(2100, 4200, { rustig: 8.5, tempo5: 9.2 }));
+  const z = opId(berekenZones(2100, 4200, { normaal: 8.5 }));
   assert.equal(z.rustig.van, 8.5); assert.equal(z.rustig.tot, 8.5); assert.equal(z.rustig.eigen, true);
-  assert.equal(z.tempo5.van, 9.2);
-  assert.equal(z.tempo10.van, 8.6); // niet ingevuld: berekend
+  assert.equal(z.tempo10.van, 8.6); // hard niet ingevuld: berekend
   assert.equal(z.tempo10.eigen, undefined);
 });
 
-test('herstel is een eigen zone: standaard wandelen, los van rustig in te stellen', () => {
-  const z = opId(berekenZones(2100, 4200, { rustig: 8.5 }));
-  assert.equal(z.rustig.van, 8.5);
-  assert.equal(z.herstel.van, 5.5); assert.equal(z.herstel.eigen, undefined);
-  const eigen = opId(berekenZones(2100, 4200, { rustig: 8.5, herstel: 6 }));
-  assert.equal(eigen.herstel.van, 6); assert.equal(eigen.herstel.eigen, true);
-  assert.equal(eigen.rustig.van, 8.5);
+test('drie eigen snelheden: langzaam, normaal en hard gelden elk voor hun groep blokken', () => {
+  const z = opId(berekenZones(2100, 4200, { langzaam: 7, normaal: 8.5, hard: 10 }));
+  assert.deepEqual([z.warmup.van, z.warmup.tot, z.uitjoggen.van], [6.2, 7, 7]);
+  assert.deepEqual([z.rustig.van, z.herstel.van], [8.5, 8.5]);
+  assert.deepEqual([z.tempo10.van, z.tempo5.van, z.snel.van], [10, 10, 10]);
+  assert.equal(z.uitwandelen.van, 5.5);
+  assert.equal(z.uitwandelen.eigen, undefined);
+});
+
+test('oude eigen snelheden (rustig, tempo5) tellen als normaal en hard', () => {
+  assert.deepEqual(normaliseerEigen({ rustig: 8.5, tempo5: 9.2, snel: 9.4 }), { normaal: 8.5, hard: 9.2 });
+  const z = opId(berekenZones(2100, 4200, { rustig: 8.5, tempo5: 9.2 }));
+  assert.equal(z.herstel.van, 8.5);
+  assert.equal(z.snel.van, 9.2);
+});
+
+test('overzicht toont vier snelheden met waar ze voor gelden', () => {
+  const s = berekenSnelheden(2100, 4200, { normaal: 8.5 });
+  assert.deepEqual(s.map((x) => x.id), ['langzaam', 'normaal', 'hard', 'wandelen']);
+  assert.equal(s[1].van, 8.5); assert.equal(s[1].eigen, true);
+  assert.ok(s[2].van < s[2].tot); // hard berekend: bereik van 10 km-tempo tot snel
 });

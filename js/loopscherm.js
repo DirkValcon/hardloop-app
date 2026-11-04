@@ -23,6 +23,10 @@ const klok = (ms) => {
 };
 const helling = (h) => `${String(h).replace('.', ',')}`;
 
+// Welke van je snelheden (Langzaam, Normaal, Hard, Wandelen) bij een blok hoort.
+const SNELHEID_VAN_SOORT = { warmup: 'Langzaam', uitjoggen: 'Langzaam', rustig: 'Normaal', herstel: 'Normaal', interval: 'Hard', tempo: 'Hard', uitwandelen: 'Wandelen' };
+export const snelheidNaam = (b) => SNELHEID_VAN_SOORT[b.soort] ?? '';
+
 function blokTitel(b) {
   if (b.herhaling && b.van) return `${b.label} ${b.herhaling} van ${b.van}`;
   if (b.deel) return `${b.label} ${b.deel.replace('/', ' van ')}`;
@@ -249,7 +253,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     $('snelheid').textContent = kmh(t.kmh);
     $('snelheid').closest('.snelheid-vak').classList.toggle('is-aangepast', t.kmh !== b.kmh);
     $('helling').textContent = helling(b.helling);
-    $('tempo').textContent = `${formatTijd(tempoPerKm(t.kmh))} /km${b.afstandM ? ` · ${b.afstandM >= 1000 ? `${String(b.afstandM / 1000).replace('.', ',')} km` : `${b.afstandM} m`}` : ''}${t.kmh !== b.kmh ? ` · schema ${kmh(b.kmh)}` : ''}`;
+    $('tempo').textContent = `${snelheidNaam(b) ? `${snelheidNaam(b)} · ` : ''}${formatTijd(tempoPerKm(t.kmh))} /km${b.afstandM ? ` · ${b.afstandM >= 1000 ? `${String(b.afstandM / 1000).replace('.', ',')} km` : `${b.afstandM} m`}` : ''}${t.kmh !== b.kmh ? ` · schema ${kmh(b.kmh)}` : ''}`;
     $('afstand').textContent = `${t.afstandKm.toFixed(2).replace('.', ',')} km`;
     // In de extra tijd telt de klok op in plaats van af.
     $('timer').textContent = t.extra ? `+${klok(t.extraMs)}` : klok(t.restBlokMs);
@@ -269,7 +273,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     const volgendeEl = $('volgende');
     volgendeEl.classList.toggle('is-aankondiging', t.aankondigen);
     volgendeEl.textContent = v
-      ? `${t.aankondigen ? `Over ${Math.ceil(t.restBlokMs / 1000)} s` : 'Hierna'}: ${blokTitel(v)}, ${kmh(t.volgendeKmh)} km/u${v.helling !== b.helling ? `, ${helling(v.helling)}%` : ''}`
+      ? `${t.aankondigen ? `Over ${Math.ceil(t.restBlokMs / 1000)} s` : 'Hierna'}: ${blokTitel(v)}, ${snelheidNaam(v) ? `${snelheidNaam(v).toLowerCase()} ` : ''}${kmh(t.volgendeKmh)} km/u${v.helling !== b.helling ? `, ${helling(v.helling)}%` : ''}`
       : t.extra
         ? 'Je schema zit erop. Loop door zolang je wilt en druk op Training afronden.'
         : 'Laatste blok. Daarna loopt de training door tot je zelf afrondt.';

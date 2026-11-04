@@ -64,13 +64,13 @@ test('gewicht geldt meteen; doeldatum alleen gecontroleerd als hij verandert', (
 });
 
 test('eigen snelheden: gelden vanaf deze week, leeg = berekend, ongeldig geweigerd', () => {
-  const p = wijzigProfiel(DIRK, invoer({ eigen: { rustig: '8,5', tempo5: '9.2', tempo10: '', snel: '' } }), VANDAAG);
-  assert.deepEqual(effectiefProfiel(p, VANDAAG).eigenSnelheden, { rustig: 8.5, tempo5: 9.2 });
+  const p = wijzigProfiel(DIRK, invoer({ eigen: { langzaam: '', normaal: '8,5', hard: '9.2' } }), VANDAAG);
+  assert.deepEqual(effectiefProfiel(p, VANDAAG).eigenSnelheden, { normaal: 8.5, hard: 9.2 });
   const plan = maakPlan(p, { vandaag: VANDAAG });
   assert.equal(week(plan, 2).trainingen[0].blokken.find((b) => b.soort === 'rustig').kmh, 8.5);
   assert.equal(week(plan, 1).trainingen[0].blokken.find((b) => b.soort === 'rustig').kmh, 7.1); // vorige week blijft
-  assert.ok(valideerWijziging(DIRK, invoer({ eigen: { rustig: '85' } }), VANDAAG)['eigen-rustig']);
-  assert.deepEqual(valideerWijziging(DIRK, invoer({ eigen: { rustig: '8,5' } }), VANDAAG), {});
+  assert.ok(valideerWijziging(DIRK, invoer({ eigen: { normaal: '85' } }), VANDAAG)['eigen-normaal']);
+  assert.deepEqual(valideerWijziging(DIRK, invoer({ eigen: { normaal: '8,5' } }), VANDAAG), {});
   // Weer leegmaken: terug naar berekend.
   const terug = wijzigProfiel(p, invoer({ eigen: {} }), VANDAAG);
   assert.deepEqual(effectiefProfiel(terug, VANDAAG).eigenSnelheden, {});

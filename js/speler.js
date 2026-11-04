@@ -17,11 +17,8 @@ const MAX_KMH = 25;
 export const sleutelVan = (blok) => `${blok.soort}@${blok.kmh}`;
 
 export function maakSpeler(blokken) {
-  const grenzen = [];
-  let som = 0;
-  for (const b of blokken) { grenzen.push(som); som += b.duurSec * 1000; }
   return {
-    blokken, grenzen, totaalMs: som, gestartOp: null, pauzeOp: null, gepauzeerdMs: 0, extraMs: 0,
+    blokken, gestartOp: null, pauzeOp: null, gepauzeerdMs: 0, extraMs: 0,
     wijzigingen: [], // { ms (schema-tijd), sleutel, kmh }
     overgeslagen: [], // { van, tot } in schema-tijd
   };
@@ -40,9 +37,43 @@ export const start = (s, nu) => ({ ...s, gestartOp: nu });
 export const pauzeer = (s, nu) => (s.pauzeOp === null ? { ...s, pauzeOp: nu } : s);
 export const hervat = (s, nu) => (s.pauzeOp === null ? s : { ...s, gepauzeerdMs: s.gepauzeerdMs + (nu - s.pauzeOp), pauzeOp: null });
 
-function blokIndex(s, ms) {
-  return ms >= s.totaalMs ? s.blokken.length - 1 : s.grenzen.findLastIndex((g) => g <= ms);
+// Begin van elk blok in schema-tijd, plus het einde van het schema. Een blok op afstand (bijvoorbeeld
+// 3,5 km) duurt zo lang als die afstand op de gelopen snelheid kost: sneller lopen maakt het korter.
+// Alles volgt uit de bewaarde wijzigingen, dus het klopt ook na herladen.
+function indeling(s) {
+  const grenzen = [];
+  let van = 0;
+  s.blokken.forEach((blok, i) => {
+    grenzen.push(van);
+    let eind = van + blok.duurSec * 1000;
+    if (blok.afstandM) {
+      const sleutel = sleutelVan(blok);
+      let pos = van;
+      let rest = blok.afstandM;
+      let v = snelheid(s, i, van);
+      eind = null;
+      for (const w of s.wijzigingen.filter((x) => x.sleutel === sleutel && x.ms > van)) {
+        const nodig = (rest / (v / 3.6)) * 1000;
+        if (pos + nodig <= w.ms) { eind = pos + nodig; break; }
+        rest -= (v / 3.6) * ((w.ms - pos) / 1000);
+        pos = w.ms;
+        v = w.kmh;
+      }
+      eind ??= pos + (rest / (v / 3.6)) * 1000;
+      // Overgeslagen: het blok eindigt waar het overslaan naartoe sprong.
+      const sprong = s.overgeslagen.find((o) => o.van >= van && o.van < eind);
+      if (sprong) eind = sprong.tot;
+    }
+    van = eind;
+  });
+  return { grenzen, totaalMs: van };
 }
+
+function blokIndex(s, ms, { grenzen, totaalMs } = indeling(s)) {
+  return ms >= totaalMs ? s.blokken.length - 1 : grenzen.findLastIndex((g) => g <= ms);
+}
+
+export const totaalMs = (s) => indeling(s).totaalMs;
 
 // Snelheid van blok `index` op schema-tijd `ms`, met de aanpassingen die tot dan gedaan zijn.
 export function snelheid(s, index, ms) {
@@ -61,11 +92,12 @@ export function pasSnelheidAan(s, nu, delta) {
 
 // Gelopen afstand in km tot schema-tijd `totMs`: per blok de snelheid maal de tijd, zonder overgeslagen stukken.
 export function afstand(s, totMs) {
+  const { grenzen } = indeling(s);
   let meters = 0;
   s.blokken.forEach((blok, i) => {
-    const van = s.grenzen[i];
+    const van = grenzen[i];
     // Het laatste blok loopt door in de extra tijd.
-    const tot = Math.min(i + 1 < s.grenzen.length ? s.grenzen[i + 1] : Infinity, totMs);
+    const tot = Math.min(i + 1 < grenzen.length ? grenzen[i + 1] : Infinity, totMs);
     if (tot <= van) return;
     const sleutel = sleutelVan(blok);
     const punten = [van, tot, ...s.wijzigingen.filter((w) => w.sleutel === sleutel && w.ms > van && w.ms < tot).map((w) => w.ms)]
@@ -90,14 +122,16 @@ export function overslaan(s, nu) {
 
 export function toestand(s, nu) {
   const ms = verstreken(s, nu);
-  const extra = ms >= s.totaalMs;
-  const index = blokIndex(s, ms);
-  const eindBlok = index + 1 < s.grenzen.length ? s.grenzen[index + 1] : s.totaalMs;
+  const ind = indeling(s);
+  const { grenzen, totaalMs: totaal } = ind;
+  const extra = ms >= totaal;
+  const index = blokIndex(s, ms, ind);
+  const eindBlok = index + 1 < grenzen.length ? grenzen[index + 1] : totaal;
   const restBlokMs = extra ? 0 : eindBlok - ms;
   const volgende = s.blokken[index + 1] ?? null;
   return {
     index, blok: s.blokken[index], volgende, extra,
-    extraMs: extra ? ms - s.totaalMs : 0,
+    extraMs: extra ? ms - totaal : 0,
     kmh: snelheid(s, index, ms),
     volgendeKmh: volgende ? snelheid(s, index + 1, ms) : null,
     gepauzeerd: s.pauzeOp !== null,
@@ -105,7 +139,7 @@ export function toestand(s, nu) {
     echtMs: echteTijd(s, nu),
     afstandKm: afstand(s, ms),
     restBlokMs,
-    restTotaalMs: Math.max(0, s.totaalMs - ms),
+    restTotaalMs: Math.max(0, totaal - ms),
     aankondigen: !extra && volgende !== null && restBlokMs <= VOORAANKONDIGING_SEC * 1000,
   };
 }

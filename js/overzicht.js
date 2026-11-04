@@ -7,7 +7,7 @@ import { effectiefProfiel, valideerWijziging, wijzigProfiel, gekozenWeken } from
 import { doelafstand, beoordeelWeken, MIN_WEKEN, MAX_WEKEN } from './generator.js';
 import { maandagVan } from './schema.js';
 import { korteDatum, kmh, km } from './opmaak.js';
-import { berekenZones, EIGEN_ZONES } from './zones.js';
+import { berekenSnelheden, EIGEN_ZONES, normaliseerEigen } from './zones.js';
 import { toonMelding } from './melding.js';
 
 const parseTijdVeilig = (tekst, standaard) => parseTijd(tekst ?? '') ?? standaard;
@@ -70,7 +70,7 @@ function overzichtHtml(profiel, vandaag, account = '') {
 
     <h2>Mijn snelheden op de loopband</h2>
     <div class="kaart">${zonesHtml(p.vijfKmSeconden, p.doelSeconden, p.eigenSnelheden)}
-      <p class="hint">Rustige snelheden komen uit je huidige ${p.schema ? 'niveau' : '5 km-tijd'}, snelle uit je doeltijd. Loop je liever op je eigen snelheid? Stel die hier in.</p>
+      <p class="hint">Elk blok in een training gebruikt een van deze snelheden. Zonder eigen snelheid rekent de app ze uit: langzaam en normaal uit je huidige ${p.schema ? 'niveau' : '5 km-tijd'}, hard uit je doeltijd.</p>
       <button type="button" class="secundair breed" data-actie="wijzig" data-sectie="snelheden">Snelheden aanpassen</button>
     </div>
 
@@ -152,7 +152,7 @@ function formulierHtml(invoer, profiel, vandaag, fouten = {}, sectie = 'instelli
         <legend class="titel">Eigen snelheden (km/u)</legend>
         <div class="hint" style="margin-bottom:8px">Leeg laten = de app rekent het uit (grijs voorbeeld). Tijdens een training kun je nog bijstellen met + en −.</div>
         ${EIGEN_ZONES.map((z) => {
-          const berekend = berekenZones(parseTijdVeilig(invoer.vijfKmTijd, profiel.vijfKmSeconden), parseTijdVeilig(invoer.doelTijd, null)).find((x) => x.id === z);
+          const berekend = berekenSnelheden(parseTijdVeilig(invoer.vijfKmTijd, profiel.vijfKmSeconden), parseTijdVeilig(invoer.doelTijd, null)).find((x) => x.id === z);
           return `<div class="eigen-rij"><label for="eigen-${z}">${berekend.naam}<small>${berekend.gebruik}</small></label>
             <input type="text" inputmode="decimal" id="eigen-${z}" name="eigen-${z}" value="${invoer.eigen?.[z] ?? ''}"
               placeholder="${kmh(berekend.van)}" ${ongeldig(`eigen-${z}`)}>${fout(`eigen-${z}`)}</div>`;
@@ -184,7 +184,7 @@ export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = 
       vijfKmTijd: formatTijd(p.vijfKmSeconden), doelTijd: p.doelSeconden ? formatTijd(p.doelSeconden) : '',
       doelDatum: profiel.doelDatum, extraWekenKeuze: profiel.extraWekenKeuze, weken: String(schemaWeken(profiel)),
       trainingsdagen: volgende?.trainingsdagen ?? p.trainingsdagen, gewicht: String(profiel.gewicht), helling: String(p.helling),
-      eigen: Object.fromEntries(Object.entries(p.eigenSnelheden ?? {}).map(([z, v]) => [z, kmh(v)])),
+      eigen: Object.fromEntries(Object.entries(normaliseerEigen(p.eigenSnelheden)).map(([z, v]) => [z, kmh(v)])),
     };
     root.innerHTML = formulierHtml(invoer, profiel, vandaag, fouten, sectie);
     const form = root.querySelector('form');

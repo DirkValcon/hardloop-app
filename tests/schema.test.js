@@ -137,7 +137,7 @@ test('eigen snelheden komen in de trainingen terecht', () => {
   assert.ok(w1[0].blokken.filter((b) => b.soort === 'rustig').every((b) => b.kmh === 8.5));
   const kwal = w1.find((t) => t.type === 'kwaliteit');
   assert.ok(kwal.blokken.filter((b) => b.soort === 'interval').every((b) => b.kmh === 9.2));
-  assert.ok(kwal.blokken.filter((b) => b.soort === 'herstel').every((b) => b.kmh === 5.5));
+  assert.ok(kwal.blokken.filter((b) => b.soort === 'herstel').every((b) => b.kmh === 8.5));
 });
 
 test('elke training heeft blokken, ook als de lange-loopdag vóór de doeldatum valt', () => {
