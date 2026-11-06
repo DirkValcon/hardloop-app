@@ -56,12 +56,6 @@ const verversScherm = () => window.dispatchEvent(new HashChangeEvent('hashchange
 const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 const hoofdletter = (t) => t[0].toUpperCase() + t.slice(1);
 
-// Kop boven Vandaag: "Donderdag 12 november". Het weeknummer staat boven de kalender.
-function datumKop(vandaag) {
-  const d = naarDatum(vandaag);
-  return `${hoofdletter(DAGNAAM[dagVan(vandaag)])} ${d.getUTCDate()} ${MAANDEN[d.getUTCMonth()]}`;
-}
-
 const weekNaam = (plan, week) => {
   if (week.soort === 'basis') return week.label;
   return `Week ${week.nummer} van ${plan.weken.filter((w) => w.soort !== 'basis').length}`;
@@ -164,7 +158,8 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
 
   let kal = kalenderHtml(plan, kalWeek, vandaag);
   for (const w of plan.weken) kal = kal.replace(`__WEEK_${w.maandag}__`, weekHtml(w, resultaten, vandaag, gekozenDag));
-  const kop = `<p class="groet" data-test="datumkop">${datumKop(vandaag)}</p><h1>Vandaag</h1>${kal}`;
+  // Geen zichtbare kop: de kalender laat de dag al zien. De kop blijft voor schermlezers.
+  const kop = `<h1 class="voor-schermlezer">Vandaag</h1>${kal}`;
   const overzicht = `<section class="kaart weekoverzicht" data-test="weekoverzicht">${overzichtHtml(plan, kalWeek, resultaten)}</section>`;
 
   // Na het tekenen: de kalender op de juiste week zetten en bij vegen kop en overzicht bijwerken.
@@ -256,8 +251,8 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
     ${rustdag}
     ${vandaagGedaan.length && !keuzeT ? '<h2>Volgende training</h2>' : ''}
     <article class="kaart vandaag-kaart training-${t.type}" data-test="vandaag" data-training="${t.id}">
-      <div class="stapnr">${wanneer} · ${week.label}</div>
-      <div class="label label-${t.type}">${TYPE[t.type]}</div>
+      <div class="kaart-kop"><span class="stapnr">${wanneer} · ${week.label}</span>
+        <span class="label label-${t.type}">${TYPE[t.type]}</span></div>
       <h2 class="vandaag-titel">${t.naam}</h2>
       <div class="cijfers">
         <div><strong data-test="duur">${minuten(t.duurSec)}</strong><small>totaal</small></div>
