@@ -46,7 +46,7 @@ export function statistieken(plan, resultaten, vandaag) {
   const namen = new Map(plan.weken.flatMap((w) => w.trainingen).map((t) => [t.id, t.naam]));
   const gelopen = Object.entries(resultaten)
     .filter(([, r]) => r.status === 'gedaan')
-    .map(([id, r]) => ({ id, naam: namen.get(id) ?? r.naam ?? 'Training', datum: r.datum, afstandKm: r.afstandKm, duurSec: r.duurSec, kcal: r.kcal }))
+    .map(([id, r]) => ({ id, naam: namen.get(id) ?? r.naam ?? 'Training', datum: r.datum, afstandKm: r.afstandKm, duurSec: r.duurSec, kcal: r.kcal, ...(r.waar ? { waar: r.waar } : {}) }))
     .sort((a, b) => b.datum.localeCompare(a.datum) || a.id.localeCompare(b.id));
 
   const maandag = maandagVan(vandaag);

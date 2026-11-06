@@ -1,6 +1,11 @@
-// Trainingsscherm voor op de loopband: groot de snelheid en helling, aftellende timer,
-// een balk met alle blokken en een aankondiging 10 seconden voor het volgende blok.
-import { maakSpeler, start, pauzeer, hervat, overslaan, toestand, pasSnelheidAan, VOORAANKONDIGING_SEC } from './speler.js';
+// Trainingsscherm. Binnen (loopband): groot de snelheid en helling. Buiten: groot je tempo uit de GPS
+// naast je doeltempo. Verder een aftellende timer, een balk met alle blokken en een aankondiging
+// 10 seconden voor het volgende blok.
+import { maakSpeler, start, pauzeer, hervat, overslaan, toestand, pasSnelheidAan, echteTijd, VOORAANKONDIGING_SEC } from './speler.js';
+import {
+  laadWaar, bewaarWaar, maakSpoor, voegPositieToe, onderbreek, toestandBuiten, overslaanBuiten, tempoOordeel,
+  AFWIJKING_DUUR_MS, SEINTJE_OPNIEUW_MS, GPS_KWIJT_MS, MAX_ONNAUWKEURIG_M,
+} from './buiten.js';
 import { kmh, minuten } from './opmaak.js';
 import { formatTijd } from './tijd.js';
 import { tempoPerKm } from './zones.js';
@@ -170,11 +175,57 @@ export const uitspraak = (b, snelheid = b.kmh) => {
 };
 export const kilometerTekst = (nr, sec) => `Kilometer ${nr}. ${spreekDuur(sec)}.`;
 
+// Buiten: "7 minuten 4 per kilometer".
+export const spreekTempo = (sec) => {
+  const s = Math.round(sec);
+  const m = Math.floor(s / 60);
+  return `${m} ${m === 1 ? 'minuut' : 'minuten'}${s % 60 ? ` ${s % 60}` : ''} per kilometer`;
+};
+export const uitspraakBuiten = (b) => {
+  const wat = b.afstandM ? `${b.afstandM >= 1000 ? `${spreekGetal(b.afstandM / 1000)} kilometer` : `${b.afstandM} meter`}` : spreekDuur(b.duurSec);
+  const naam = snelheidNaam(b);
+  return `${blokTitel(b)}: ${wat}, ${naam ? `${naam.toLowerCase()}, ` : ''}tempo ${spreekTempo(tempoPerKm(b.kmh))}`;
+};
+export const tempoSeintje = (oordeel, tempo, doel) =>
+  `${oordeel === 'te-snel' ? 'Iets rustiger' : 'Iets sneller'}. Je loopt ${spreekTempo(tempo)}, je doel is ${spreekTempo(doel)}.`;
+
+const afstandTekst = (m) => (m >= 1000 ? `${String(Math.round(m / 10) / 100).replace('.', ',')} km` : `${Math.round(m)} m`);
+
+// GPS volgen zolang het scherm buiten open is. Meldt elke positie en de status.
+function volgGps(bijPositie, bijStatus) {
+  if (!navigator.geolocation) { bijStatus({ status: 'geen' }); return () => {}; }
+  bijStatus({ status: 'zoeken' });
+  const id = navigator.geolocation.watchPosition(
+    (p) => {
+      const nauwkeurig = p.coords.accuracy;
+      bijStatus({ status: nauwkeurig <= MAX_ONNAUWKEURIG_M ? 'ok' : 'zwak', nauwkeurig, fixOp: Date.now() });
+      bijPositie({ lat: p.coords.latitude, lon: p.coords.longitude, nauwkeurig });
+    },
+    (e) => bijStatus({ status: e.code === 1 ? 'geweigerd' : 'zoeken' }),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 20_000 },
+  );
+  return () => navigator.geolocation.clearWatch(id);
+}
+
+function gpsTekst(gps, nu) {
+  if (gps.status === 'geweigerd') return 'Geen toegang tot je locatie. Zet locatie aan voor Safari: Instellingen › Privacy › Locatievoorzieningen.';
+  if (gps.status === 'geen') return 'Deze telefoon geeft geen locatie door.';
+  if (gps.fixOp && nu - gps.fixOp > GPS_KWIJT_MS) return 'GPS kwijt…';
+  if (gps.status === 'ok') return `GPS ✓ ±${Math.round(gps.nauwkeurig)} m`;
+  if (gps.status === 'zwak') return `GPS zwak ±${Math.round(gps.nauwkeurig)} m`;
+  return 'GPS zoekt je locatie…';
+}
+
 // ---------- Scherm ----------
 
 export function toonLoopscherm(root, training, { opslag = localStorage, profiel, terug, klaar, volgnummer = null } = {}) {
   const geluid = maakGeluid();
   let speler = maakSpeler(training.blokken);
+  let waar = laadWaar(opslag);
+  let gps = { status: 'uit' };
+  let stopGps = null;
+  let afwijking = null; // { soort, sinds } zolang je te snel of te langzaam loopt
+  let laatsteSeintje = -Infinity;
   let timer = null;
   let stopSchermAan = null;
   let vorige = { index: -1, aankondigen: false, extra: false, km: 0, kmOpMs: 0 };
@@ -182,15 +233,35 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   // Doorgaan na herladen: de lopende training staat in de opslag.
   try {
     const bewaard = JSON.parse(opslag.getItem(OPSLAG_LOPEND));
-    if (bewaard?.trainingId === training.id) speler = { ...speler, ...bewaard.stand };
+    if (bewaard?.trainingId === training.id) { speler = { ...speler, ...bewaard.stand }; waar = bewaard.waar ?? 'binnen'; }
   } catch { /* geen lopende training */ }
 
   const bewaar = () => {
-    const { gestartOp, pauzeOp, gepauzeerdMs, extraMs, wijzigingen, overgeslagen } = speler;
+    const { gestartOp, pauzeOp, gepauzeerdMs, extraMs, wijzigingen, overgeslagen, spoor, sprongen } = speler;
     opslag.setItem(OPSLAG_LOPEND, JSON.stringify({
-      trainingId: training.id, stand: { gestartOp, pauzeOp, gepauzeerdMs, extraMs, wijzigingen, overgeslagen },
+      trainingId: training.id, waar, stand: { gestartOp, pauzeOp, gepauzeerdMs, extraMs, wijzigingen, overgeslagen, spoor, sprongen },
     }));
   };
+  const buiten = () => waar === 'buiten';
+  const stand = (nu) => (buiten() ? toestandBuiten(speler, nu) : toestand(speler, nu));
+  const spreek = (b, kmhNu) => (buiten() ? uitspraakBuiten(b) : uitspraak(b, kmhNu));
+  const toonGps = () => {
+    const el = root.querySelector('[data-test=gps-status]');
+    if (!el) return;
+    el.textContent = gpsTekst(gps, Date.now());
+    el.dataset.status = gps.fixOp && Date.now() - gps.fixOp > GPS_KWIJT_MS ? 'kwijt' : gps.status;
+  };
+  const startGps = () => {
+    if (stopGps) return;
+    speler = { ...speler, spoor: speler.spoor ?? maakSpoor(), sprongen: speler.sprongen ?? [] };
+    stopGps = volgGps((pos) => {
+      // Alleen tijdens het lopen telt de weg; in een pauze niet.
+      if (speler.gestartOp === null || speler.pauzeOp !== null) return;
+      speler = { ...speler, spoor: voegPositieToe(speler.spoor, pos, echteTijd(speler, Date.now())) };
+      bewaar();
+    }, (g) => { gps = { ...gps, ...g }; toonGps(); });
+  };
+  const stopGpsNu = () => { stopGps?.(); stopGps = null; };
   const opruimen = () => {
     clearInterval(timer);
     timer = null;
@@ -198,6 +269,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     root.onpointerdown = root.onpointerup = root.onpointercancel = root.onpointerout = null;
     stopSchermAan?.();
     document.removeEventListener('visibilitychange', geluidTerug);
+    stopGpsNu();
     opslag.removeItem(OPSLAG_LOPEND);
   };
 
@@ -206,18 +278,28 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
 
   function tekenVoorStart() {
     document.body.classList.add('loopmodus');
+    const b0 = training.blokken[0];
+    const keuze = (w, titel, sub) => `<button type="button" role="radio" aria-checked="${waar === w}" data-actie="waar" data-waar="${w}">${titel}<small>${sub}</small></button>`;
     root.innerHTML = `
       <section class="loop" data-test="loopscherm">
         <div class="loop-kop"><button type="button" class="secundair klein" data-actie="terug">Terug</button></div>
         <h1>${training.naam}</h1>
-        <p class="uitleg">${minuten(training.duurSec)} · ${training.blokken.length} blokken. Je hoort na elke kilometer je tijd en 10 seconden voor elk blok wat je moet doen. Zet de loopband op
-          <strong>${kmh(training.blokken[0].kmh)} km/u</strong> en <strong>${helling(training.blokken[0].helling)}%</strong> en druk op Start.</p>
+        <div class="waar-keuze" role="radiogroup" aria-label="Waar loop je?" data-test="waar">
+          ${keuze('binnen', 'Binnen', 'op de loopband')}${keuze('buiten', 'Buiten', 'tempo met GPS')}
+        </div>
+        <p class="uitleg">${minuten(training.duurSec)} · ${training.blokken.length} blokken. Je hoort na elke kilometer je tijd en 10 seconden voor elk blok wat je moet doen. ${buiten()
+          ? `Begin ${snelheidNaam(b0).toLowerCase()} op <strong>${formatTijd(tempoPerKm(b0.kmh))} /km</strong> en druk op Start.`
+          : `Zet de loopband op <strong>${kmh(b0.kmh)} km/u</strong> en <strong>${helling(b0.helling)}%</strong> en druk op Start.`}</p>
+        ${buiten() ? `
+        <p class="gps-status" data-test="gps-status"></p>
+        <p class="hint" data-test="gps-uitleg">Houd de app open met het scherm aan. Gaat je iPhone op slot of open je een andere app, dan stopt de GPS en komt je afstand lager uit. Muziek bedienen kan met je oortjes of via het bedieningspaneel.</p>` : ''}
         <div class="loop-balk">${balk}</div>
-        <label class="keuze geluid-keuze"><input type="checkbox" data-actie="geluid" checked>
+        <label class="keuze geluid-keuze"><input type="checkbox" data-actie="geluid" ${geluid.aan ? 'checked' : ''}>
           <span>Geluid en gesproken aanwijzingen<small>Zet het volume van je iPhone aan.</small></span></label>
         <button type="button" class="secundair breed" data-actie="test-geluid">Test geluid</button>
         <button type="button" class="primair breed groot" data-actie="start">Start</button>
       </section>`;
+    if (buiten()) { startGps(); toonGps(); } else stopGpsNu();
   }
 
   function tekenLopend() {
@@ -227,8 +309,17 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
           <span class="loop-titel" data-test="bloktitel"></span>
           <span class="loop-totaal" data-test="totaal"></span>
         </div>
-        <div class="loop-stand"><span data-test="afstand"></span><span data-test="laatste-km"></span></div>
+        <div class="loop-stand"><span data-test="afstand"></span>${buiten() ? '<span class="gps-status" data-test="gps-status"></span>' : ''}<span data-test="laatste-km"></span></div>
         <div class="loop-timer" data-test="timer"></div>
+        ${buiten() ? `
+        <div class="loop-groot is-buiten">
+          <div class="tempo-vak" data-test="tempo-vak">
+            <span class="waarde" data-test="tempo-nu"></span><span class="eenheid">/km nu</span>
+            <span class="loop-oordeel" data-test="oordeel"></span>
+          </div>
+          <div><span class="waarde" data-test="doeltempo"></span><span class="eenheid">/km doel</span>
+            <span class="loop-tempo" data-test="tempo"></span></div>
+        </div>` : `
         <div class="loop-groot">
           <div class="snelheid-vak">
             <span class="waarde" data-test="snelheid"></span><span class="eenheid">km/u</span>
@@ -239,7 +330,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
           </div>
           <div><span class="waarde" data-test="helling"></span><span class="eenheid">% helling</span>
             <span class="loop-tempo" data-test="tempo"></span></div>
-        </div>
+        </div>`}
         <div class="loop-balk">${balk}</div>
         <div class="loop-volgende" data-test="volgende"></div>
         <div class="bediening">
@@ -254,8 +345,11 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   }
 
   function tekenKlaar(gestopt = false) {
-    const t = toestand(speler, Date.now());
+    const t = stand(Date.now());
     const sec = Math.round(t.echtMs / 1000);
+    const waarNu = waar;
+    // Buiten is er geen helling van de loopband.
+    const gelopen = buiten() ? { ...training, blokken: training.blokken.map((b) => ({ ...b, helling: 0 })) } : training;
     const afstandKm = Math.round(t.afstandKm * 100) / 100;
     opruimen();
     document.body.classList.remove('loopmodus');
@@ -269,26 +363,38 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
           : `${training.naam} zit erop.`}</p>
         ${afrondFormulier({
           afstandKm, duurSec: sec,
-          kcal: schatKcal(training, afstandKm, profiel.gewicht),
-        }, {}, { samenvatting })}
+          kcal: schatKcal(gelopen, afstandKm, profiel.gewicht),
+        }, {}, { samenvatting, waar: waarNu })}
       </section>`;
-    koppelAfronden(root, training, profiel, { opslag, samenvatting, opgeslagen: () => klaar?.(), annuleer: () => terug?.() });
+    koppelAfronden(root, gelopen, profiel, { opslag, samenvatting, waar: waarNu, opgeslagen: () => klaar?.(), annuleer: () => terug?.() });
   }
 
   function ververs() {
     const nu = Date.now();
-    const t = toestand(speler, nu);
+    const t = stand(nu);
     const $ = (sel) => root.querySelector(`[data-test=${sel}]`);
     const b = t.blok;
+    const blokAfstand = b.afstandM ? ` · ${b.afstandM >= 1000 ? `${String(b.afstandM / 1000).replace('.', ',')} km` : `${b.afstandM} m`}` : '';
     $('bloktitel').textContent = t.extra ? 'Extra: doorlopen' : blokTitel(b);
-    $('totaal').textContent = t.extra ? `schema klaar · ${klok(t.echtMs)}` : `nog ${klok(t.restTotaalMs)}`;
-    $('snelheid').textContent = kmh(t.kmh);
-    $('snelheid').closest('.snelheid-vak').classList.toggle('is-aangepast', t.kmh !== b.kmh);
-    $('helling').textContent = helling(b.helling);
-    $('tempo').textContent = `${snelheidNaam(b) ? `${snelheidNaam(b)} · ` : ''}${formatTijd(tempoPerKm(t.kmh))} /km${b.afstandM ? ` · ${b.afstandM >= 1000 ? `${String(b.afstandM / 1000).replace('.', ',')} km` : `${b.afstandM} m`}` : ''}${t.kmh !== b.kmh ? ` · schema ${kmh(b.kmh)}` : ''}`;
+    if (buiten()) {
+      $('totaal').textContent = t.extra ? `schema klaar · ${klok(t.echtMs)}` : `${klok(t.echtMs)} gelopen`;
+      $('tempo-nu').textContent = t.tempoNu ? formatTijd(t.tempoNu) : '–:––';
+      const oordeel = t.gepauzeerd ? null : tempoOordeel(t.tempoNu, t.doelTempo);
+      $('tempo-vak').dataset.oordeel = oordeel ?? '';
+      $('oordeel').textContent = { 'te-snel': 'te snel', 'te-langzaam': 'te langzaam', goed: 'goed zo' }[oordeel] ?? '';
+      $('doeltempo').textContent = formatTijd(t.doelTempo);
+      $('tempo').textContent = `${snelheidNaam(b) ? `${snelheidNaam(b)} · ` : ''}${kmh(b.kmh)} km/u${blokAfstand}`;
+      toonGps();
+    } else {
+      $('totaal').textContent = t.extra ? `schema klaar · ${klok(t.echtMs)}` : `nog ${klok(t.restTotaalMs)}`;
+      $('snelheid').textContent = kmh(t.kmh);
+      $('snelheid').closest('.snelheid-vak').classList.toggle('is-aangepast', t.kmh !== b.kmh);
+      $('helling').textContent = helling(b.helling);
+      $('tempo').textContent = `${snelheidNaam(b) ? `${snelheidNaam(b)} · ` : ''}${formatTijd(tempoPerKm(t.kmh))} /km${blokAfstand}${t.kmh !== b.kmh ? ` · schema ${kmh(b.kmh)}` : ''}`;
+    }
     $('afstand').textContent = `${t.afstandKm.toFixed(2).replace('.', ',')} km`;
-    // In de extra tijd telt de klok op in plaats van af.
-    $('timer').textContent = t.extra ? `+${klok(t.extraMs)}` : klok(t.restBlokMs);
+    // In de extra tijd telt de klok op in plaats van af. Buiten telt een afstandsblok de meters af.
+    $('timer').textContent = t.extra ? `+${klok(t.extraMs)}` : t.restBlokM !== null && t.restBlokM !== undefined ? afstandTekst(t.restBlokM) : klok(t.restBlokMs);
     const sectie = root.querySelector('.loop');
     sectie.dataset.soort = t.extra ? 'extra' : b.soort;
     root.querySelector('[data-actie=overslaan]').hidden = t.extra;
@@ -304,8 +410,11 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     const v = t.volgende;
     const volgendeEl = $('volgende');
     volgendeEl.classList.toggle('is-aankondiging', t.aankondigen);
+    const volgendDoel = (x) => (buiten()
+      ? `${formatTijd(tempoPerKm(x.kmh))} /km`
+      : `${kmh(t.volgendeKmh)} km/u${x.helling !== b.helling ? `, ${helling(x.helling)}%` : ''}`);
     volgendeEl.textContent = v
-      ? `${t.aankondigen ? `Over ${Math.ceil(t.restBlokMs / 1000)} s` : 'Hierna'}: ${blokTitel(v)}, ${snelheidNaam(v) ? `${snelheidNaam(v).toLowerCase()} ` : ''}${kmh(t.volgendeKmh)} km/u${v.helling !== b.helling ? `, ${helling(v.helling)}%` : ''}`
+      ? `${t.aankondigen ? `Over ${Math.ceil(t.restBlokMs / 1000)} s` : 'Hierna'}: ${blokTitel(v)}, ${snelheidNaam(v) ? `${snelheidNaam(v).toLowerCase()} ` : ''}${volgendDoel(v)}`
       : t.extra
         ? 'Je schema zit erop. Loop door zolang je wilt en druk op Training afronden.'
         : 'Laatste blok. Daarna loopt de training door tot je zelf afrondt.';
@@ -323,9 +432,23 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     if (t.extra && !vorige.extra) {
       geluid.piep(3, true);
       geluid.zeg('Je training zit erop. Loop gerust door, en druk op afronden als je klaar bent.');
-    } else if (t.index !== vorige.index && vorige.index !== -1) { geluid.piep(2, true); geluid.zeg(`Nu: ${uitspraak(b, t.kmh)}`); }
-    else if (t.aankondigen && !vorige.aankondigen) { geluid.piep(1); geluid.zeg(`Over ${VOORAANKONDIGING_SEC} seconden: ${uitspraak(v, t.volgendeKmh)}`); }
+    } else if (t.index !== vorige.index && vorige.index !== -1) { geluid.piep(2, true); geluid.zeg(`Nu: ${spreek(b, t.kmh)}`); }
+    else if (t.aankondigen && !vorige.aankondigen) { geluid.piep(1); geluid.zeg(`Over ${VOORAANKONDIGING_SEC} seconden: ${spreek(v, t.volgendeKmh)}`); }
+    else if (buiten()) seintjeTempo(t);
+    if (t.index !== vorige.index) { afwijking = null; laatsteSeintje = -Infinity; }
     vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, extra: t.extra };
+  }
+
+  // Buiten: zit je een halve minuut ruim naast je doeltempo, dan zegt de app "iets rustiger" of "iets sneller".
+  function seintjeTempo(t) {
+    const oordeel = !t.extra && !t.gepauzeerd && t.blok.soort !== 'uitwandelen' && t.blokMs >= 20_000
+      ? tempoOordeel(t.blokTempo, t.doelTempo) : null;
+    if (oordeel !== 'te-snel' && oordeel !== 'te-langzaam') { afwijking = null; return; }
+    if (afwijking?.soort !== oordeel) afwijking = { soort: oordeel, sinds: t.echtMs };
+    if (t.echtMs - afwijking.sinds < AFWIJKING_DUUR_MS || t.echtMs - laatsteSeintje < SEINTJE_OPNIEUW_MS || t.aankondigen) return;
+    laatsteSeintje = t.echtMs;
+    geluid.piep(1);
+    geluid.zeg(tempoSeintje(oordeel, t.blokTempo, t.doelTempo));
   }
 
   // Terug in de app (scherm weer aan): het geluid weer wakker maken.
@@ -336,8 +459,9 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     koppelStop();
     stopSchermAan = houdSchermAan();
     document.addEventListener('visibilitychange', geluidTerug);
+    if (buiten()) startGps();
     // Na herladen niet opnieuw alle kilometers en het huidige blok aankondigen.
-    const t = toestand(speler, Date.now());
+    const t = stand(Date.now());
     vorige = { ...vorige, index: t.index, aankondigen: t.aankondigen, extra: t.extra, km: Math.floor(t.afstandKm), kmOpMs: t.echtMs };
     ververs();
     timer = setInterval(ververs, 250);
@@ -349,26 +473,47 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     const nu = Date.now();
     if (actie && actie !== 'start' && actie !== 'terug' && speler.gestartOp !== null) geluid.ontgrendel();
     if (actie === 'geluid') geluid.zet(e.target.checked);
+    if (actie === 'waar') {
+      const knop = e.target.closest('[data-waar]');
+      waar = knop.dataset.waar;
+      bewaarWaar(opslag, waar);
+      tekenVoorStart();
+    }
     if (actie === 'test-geluid') { geluid.ontgrendel(); geluid.piep(2, true); geluid.zeg('Geluid werkt. Zo klinkt een aankondiging.'); }
     if (actie === 'terug') { document.body.classList.remove('loopmodus'); terug?.(); }
     // Stop werkt door vasthouden (hieronder); alleen met het toetsenbord vragen we het.
     if (actie === 'stop' && e.detail === 0 && confirm('Training stoppen?')) stoppen();
     if (actie === 'start') {
       geluid.ontgrendel();
-      geluid.zeg(`Start. ${uitspraak(training.blokken[0])}`);
+      geluid.zeg(`Start. ${spreek(training.blokken[0], training.blokken[0].kmh)}`);
       speler = start(speler, nu);
       bewaar();
       loop();
     }
-    if (actie === 'pauze') { speler = speler.pauzeOp === null ? pauzeer(speler, nu) : hervat(speler, nu); bewaar(); ververs(); }
+    if (actie === 'pauze') {
+      if (speler.pauzeOp === null) speler = pauzeer(speler, nu);
+      else {
+        speler = hervat(speler, nu);
+        // De weg tijdens de pauze telt niet: na hervatten begint de GPS-lijn opnieuw.
+        if (speler.spoor) speler = { ...speler, spoor: onderbreek(speler.spoor) };
+      }
+      bewaar();
+      ververs();
+    }
     if (actie === 'overslaan') {
       const ervoor = speler;
-      speler = overslaan(speler, nu);
+      speler = buiten() ? overslaanBuiten(speler, nu) : overslaan(speler, nu);
       bewaar();
       ververs();
       toonMelding('Blok overgeslagen', {
         actie: 'Ongedaan maken',
-        bijActie: () => { if (timer === null) return; speler = ervoor; bewaar(); ververs(); },
+        bijActie: () => {
+          if (timer === null) return;
+          // Buiten: alleen het overslaan terugdraaien; de GPS-meters sinds dan blijven staan.
+          speler = buiten() ? { ...speler, sprongen: ervoor.sprongen } : ervoor;
+          bewaar();
+          ververs();
+        },
       });
     }
     // Met vinger of muis regelt het vasthouden (hieronder) de stappen; dit is voor het toetsenbord.
@@ -452,5 +597,5 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
 
   if (speler.gestartOp !== null) loop();
   else tekenVoorStart();
-  return () => { stopHerhalen(); clearInterval(timer); stopSchermAan?.(); document.removeEventListener('visibilitychange', geluidTerug); };
+  return () => { stopHerhalen(); clearInterval(timer); stopSchermAan?.(); stopGpsNu(); document.removeEventListener('visibilitychange', geluidTerug); };
 }

@@ -503,3 +503,17 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
   .vg-boven .vg-kolom:last-child > h2:first-child { margin-top: 0; }
   .tegels { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Binnen of buiten lopen */
+.waar-keuze { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+.waar-keuze button { padding: 12px 8px; border-radius: 16px; border: 2px solid var(--lijn); background: var(--kaart); color: var(--tekst); font: inherit; font-weight: 800; font-size: 18px; text-align: center; }
+.waar-keuze button small { display: block; font-weight: 600; font-size: 13px; color: var(--zacht); }
+.waar-keuze button[aria-checked=true] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.gps-status { font-weight: 700; color: var(--zacht); margin: 4px 0; }
+.gps-status[data-status=ok] { color: var(--rustig); }
+.gps-status[data-status=zwak], .gps-status[data-status=kwijt], .gps-status[data-status=geweigerd], .gps-status[data-status=geen] { color: var(--fout); }
+.loop-stand .gps-status { margin: 0; font-size: 14px; }
+.loop-oordeel { display: block; font-size: 14px; font-weight: 700; min-height: 1.2em; color: var(--zacht); }
+.tempo-vak[data-oordeel=goed] .loop-oordeel { color: var(--rustig); }
+.tempo-vak[data-oordeel=te-snel] .loop-oordeel, .tempo-vak[data-oordeel=te-langzaam] .loop-oordeel { color: var(--fout); }
+.loop-groot.is-buiten .tempo-vak[data-oordeel=te-snel], .loop-groot.is-buiten .tempo-vak[data-oordeel=te-langzaam] { border-color: var(--fout); }

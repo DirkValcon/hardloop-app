@@ -30,7 +30,7 @@ assert.match(di.kaart, /49 min/);
 assert.match(di.kaart, /Warming-up ?10 min ?6,1–6,9 km\/u/);
 assert.match(di.kaart, /Uitjoggen \+ uitwandelen ?5 min ?5,5–6,1 km\/u/);
 assert.ok(di.kcal > 350 && di.kcal < 550, String(di.kcal));
-assert.equal(di.start, 'Start op loopband');
+assert.equal(di.start, 'Start training');
 assert.match(di.totDoel, /Nog 75 dagen tot je 10 km op 17 januari 2027/);
 
 // Rustdag: woensdag 4 november, volgende is de kwaliteitstraining op donderdag.

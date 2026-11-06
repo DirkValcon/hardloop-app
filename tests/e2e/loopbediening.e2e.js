@@ -7,7 +7,7 @@ const { page, url, fouten, shot, sluit } = await opzet({ vandaag: '2026-11-05', 
 try {
   await page.setViewportSize({ width: 375, height: 667 });
   await page.goto(url);
-  await page.getByRole('button', { name: 'Start op loopband' }).click();
+  await page.getByRole('button', { name: 'Start training' }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   await page.waitForSelector('[data-test=bloktitel]');
   for (const naam of ['Stop', 'Pauze', 'Volgend blok', 'Sneller']) {
