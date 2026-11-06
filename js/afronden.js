@@ -8,7 +8,7 @@ const getal = (v) => Number(String(v).replace(',', '.'));
 
 // Met `samenvatting` (na een training in de app) zie je eerst wat je gedaan hebt; de velden zitten dan
 // achter "Aanpassen". Zonder samenvatting (afvinken zonder app) staan de velden meteen open.
-export function afrondFormulier({ afstandKm, duurSec, kcal }, fouten = {}, { samenvatting = null } = {}) {
+export function afrondFormulier({ afstandKm, duurSec, kcal }, fouten = {}, { samenvatting = null, waar = 'binnen' } = {}) {
   const fout = (v) => (fouten[v] ? `<div class="foutmelding" role="alert">${fouten[v]}</div>` : '');
   // Telde de app geen afstand (alles overgeslagen), dan meteen de velden tonen om die in te vullen.
   const open = !samenvatting || Object.keys(fouten).length || !(afstandKm > 0);
@@ -27,7 +27,7 @@ export function afrondFormulier({ afstandKm, duurSec, kcal }, fouten = {}, { sam
       <div class="veld">
         <label class="titel" for="afstandKm">Afstand (km)</label>
         <input type="text" inputmode="decimal" id="afstandKm" name="afstandKm" value="${km(afstandKm)}" ${fouten.afstandKm ? 'aria-invalid="true"' : ''}>
-        <div class="hint">Neem de afstand over van het scherm van de loopband.</div>
+        <div class="hint">${waar === 'buiten' ? 'Gemeten met de GPS van je telefoon.' : 'Neem de afstand over van het scherm van de loopband.'}</div>
         ${fout('afstandKm')}
       </div>
       <div class="veld">
@@ -51,7 +51,7 @@ export function afrondFormulier({ afstandKm, duurSec, kcal }, fouten = {}, { sam
 
 // Koppelt het formulier: bij een andere afstand schuift de calorieschatting mee, tot je die zelf aanpast.
 // `bevestig`: "Niet opslaan" vraagt eerst of je het zeker weet (na een training in de app gaat die anders verloren).
-export function koppelAfronden(container, training, profiel, { opslag = localStorage, vandaag = vandaagIso(), opgeslagen, annuleer, samenvatting = null }) {
+export function koppelAfronden(container, training, profiel, { opslag = localStorage, vandaag = vandaagIso(), opgeslagen, annuleer, samenvatting = null, waar = 'binnen' }) {
   const form = container.querySelector('form.afronden');
   let kcalZelf = false;
   form.kcal.addEventListener('input', () => { kcalZelf = true; });
@@ -83,10 +83,10 @@ export function koppelAfronden(container, training, profiel, { opslag = localSto
     const fouten = valideerResultaat(waarden);
     if (Object.keys(fouten).length) {
       const bewaar = { afstandKm: waarden.afstandKm || 0, duurSec: (waarden.duurMin || 0) * 60, kcal: form.kcal.value };
-      form.outerHTML = afrondFormulier(bewaar, fouten, { samenvatting });
-      return koppelAfronden(container, training, profiel, { opslag, vandaag, opgeslagen, annuleer, samenvatting });
+      form.outerHTML = afrondFormulier(bewaar, fouten, { samenvatting, waar });
+      return koppelAfronden(container, training, profiel, { opslag, vandaag, opgeslagen, annuleer, samenvatting, waar });
     }
-    markeerGedaan(opslag, training, waarden, vandaag);
+    markeerGedaan(opslag, training, { ...waarden, waar }, vandaag);
     opgeslagen?.();
   });
 }

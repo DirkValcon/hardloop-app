@@ -25,17 +25,18 @@ function bewaar(opslag, r) {
 
 export function valideerResultaat({ afstandKm, duurMin, kcal }) {
   const fouten = {};
-  if (!(afstandKm > 0 && afstandKm <= 50)) fouten.afstandKm = 'Vul de afstand in km in, zoals op de loopband staat.';
+  if (!(afstandKm > 0 && afstandKm <= 50)) fouten.afstandKm = 'Vul de afstand in km in.';
   if (!(duurMin > 0 && duurMin <= 300)) fouten.duurMin = 'Vul de duur in minuten in.';
   if (!(kcal >= 0 && kcal <= 5000)) fouten.kcal = 'Vul de calorieën in (0 tot 5000).';
   return fouten;
 }
 
-export function markeerGedaan(opslag, training, { afstandKm, duurMin, kcal }, vandaag) {
+export function markeerGedaan(opslag, training, { afstandKm, duurMin, kcal, waar }, vandaag) {
   const r = laadResultaten(opslag);
   r[training.id] = {
     status: 'gedaan', datum: vandaag, gepland: training.datum, type: training.type, naam: training.naam,
     afstandKm: Math.round(afstandKm * 100) / 100, duurSec: Math.round(duurMin * 60), kcal: Math.round(kcal),
+    ...(waar === 'buiten' ? { waar } : {}),
   };
   return bewaar(opslag, r);
 }

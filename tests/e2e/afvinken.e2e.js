@@ -10,7 +10,7 @@ const tekst = async (page, sel) => (await page.textContent(sel)).replace(/\s+/g,
   const { page, url, fouten, shot, sluit } = await opzet({ vandaag: '2026-11-03', profiel, klokLoopt: true });
   try {
     await page.goto(url);
-    await page.getByRole('button', { name: 'Start op loopband' }).click();
+    await page.getByRole('button', { name: 'Start training' }).click();
     await page.getByRole('button', { name: 'Start', exact: true }).click();
     await page.clock.runFor(20 * 60_000);
     await houdStopIngedrukt(page);

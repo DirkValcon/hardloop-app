@@ -76,7 +76,7 @@ export function toonVoortgang(root, profiel, { vandaag = vandaagIso(), opslag = 
     <h2>Gelopen trainingen</h2>
     <div class="kaart">${v.gelopen.length ? `
       <ol class="gelopen" data-test="gelopen">${v.gelopen.map((g) => `
-        <li><span>${g.naam}<small>${korteDatum(g.datum)} · ${minuten(g.duurSec)} · ${g.kcal} kcal</small></span>
+        <li><span>${g.naam}<small>${korteDatum(g.datum)}${g.waar === 'buiten' ? ' · buiten' : ''} · ${minuten(g.duurSec)} · ${g.kcal} kcal</small></span>
           <span class="blok-waarden"><strong>${km(g.afstandKm)}</strong> km<small>${formatTijd(g.duurSec / g.afstandKm)} /km</small></span></li>`).join('')}
       </ol>` : '<p class="hint">Nog geen trainingen gelopen.</p>'}
     </div>

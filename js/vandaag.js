@@ -237,7 +237,7 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
     ? `<p class="status-regel is-gedaan" data-test="status">✓ Gedaan${r.datum !== t.datum ? ` op ${korteDatum(r.datum)}` : ''}: ${km(r.afstandKm)} km · ${minuten(r.duurSec)} · ${r.kcal} kcal</p>`
     : r?.status === 'overgeslagen'
       ? '<p class="status-regel" data-test="status">Overgeslagen</p>'
-      : `<a class="knop primair breed" href="#loop/${t.id}" role="button" data-actie="start">${isVandaag ? 'Start op loopband' : 'Nu al starten'}</a>
+      : `<a class="knop primair breed" href="#loop/${t.id}" role="button" data-actie="start">${isVandaag ? 'Start training' : 'Nu al starten'}</a>
       ${isVandaag ? `<div class="knoppen klein-knoppen">
         <a class="knop secundair" href="#afvinken/${t.id}">Afvinken zonder app</a>
         <button type="button" class="secundair" data-overslaan="${t.id}">Overslaan</button>

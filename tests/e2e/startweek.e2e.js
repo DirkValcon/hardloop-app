@@ -52,7 +52,7 @@ try {
 
   // Test geluid op het loopscherm.
   await page.goto(url);
-  await page.getByRole('button', { name: /Start op loopband|Nu al starten/ }).first().click();
+  await page.getByRole('button', { name: /Start training|Nu al starten/ }).first().click();
   await page.getByRole('button', { name: 'Test geluid' }).click();
   assert.deepEqual(await page.evaluate(() => window.__gezegd), ['Geluid werkt. Zo klinkt een aankondiging.']);
   assert.deepEqual(fouten, []);

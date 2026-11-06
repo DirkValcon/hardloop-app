@@ -16,7 +16,7 @@ try {
     });
   });
   await page.goto(url);
-  await page.getByRole('button', { name: 'Start op loopband' }).click();
+  await page.getByRole('button', { name: 'Start training' }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   assert.match((await gezegd())[0], /^Start\. Warming-up 1 van 3: 4 minuten op 6 komma 1 kilometer per uur, helling 1 procent$/);
 

@@ -29,7 +29,7 @@ try {
     });
   });
   await page.goto(url);
-  await page.getByRole('button', { name: 'Start op loopband' }).click();
+  await page.getByRole('button', { name: 'Start training' }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).click();
 
   // Tijdens de startaankondiging is het kanaal geclaimd.

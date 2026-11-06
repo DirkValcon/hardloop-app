@@ -9,7 +9,7 @@ const tijd = async (ms) => page.clock.runFor(ms);
 
 try {
   await page.goto(url);
-  await page.getByRole('button', { name: 'Start op loopband' }).click();
+  await page.getByRole('button', { name: 'Start training' }).click();
   await page.waitForSelector('[data-test=loopscherm]');
   assert.equal(await page.locator('nav.tabs').count(), 0, 'tabs verborgen tijdens het lopen');
   assert.match(await page.textContent('main'), /6,1 km\/u.*1%/s);
