@@ -99,13 +99,24 @@ const tekst = async (page, sel) => (await page.textContent(sel)).replace(/\s+/g,
 
 // Deel 3: zaterdag 7 nov, de verplaatste kwaliteitstraining overslaan.
 {
-  const { page, url, fouten, sluit } = await opzet({ vandaag: '2026-11-07', profiel });
+  const { page, url, fouten, shot, sluit } = await opzet({ vandaag: '2026-11-07', profiel });
   try {
     await page.addInitScript(() => localStorage.setItem('hardloop-app.aanpassingen.v1',
       JSON.stringify({ verplaatst: { 'w1-kwaliteit': '2026-11-07' }, vrij: [] })));
     await page.goto(url);
     assert.match(await tekst(page, '[data-test=vandaag]'), /Vandaag.*6 × 400 m/);
-    await page.getByRole('button', { name: 'Overslaan' }).last().click();
+    // Alleen Start training is zichtbaar; Voltooien en Overslaan zitten achter ⋯.
+    const menu = page.locator('[data-test=vandaag] [data-test=meer-menu]');
+    assert.equal(await menu.getByRole('button', { name: 'Overslaan' }).isVisible(), false);
+    assert.equal(await page.getByText('Afvinken zonder app').count(), 0);
+    await menu.getByLabel('Meer opties').click();
+    assert.equal(await menu.getByRole('link', { name: 'Voltooien' }).getAttribute('href'), '#afvinken/w1-kwaliteit');
+    await shot('meer-menu');
+    // Tik ernaast sluit het menu.
+    await page.locator('[data-test=vandaag] h2').click();
+    assert.equal(await menu.getByRole('button', { name: 'Overslaan' }).isVisible(), false);
+    await menu.getByLabel('Meer opties').click();
+    await menu.getByRole('button', { name: 'Overslaan' }).click();
     assert.match(await tekst(page, '[data-test=vandaag]'), /Morgen.*Lange duurloop 5 km/);
     await page.getByRole('link', { name: 'Schema' }).click();
     await page.waitForSelector('#week-1');

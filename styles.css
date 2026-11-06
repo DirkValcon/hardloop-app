@@ -221,6 +221,16 @@ body.met-tabs main { padding-bottom: 120px; }
 .fases li:nth-child(2) .blok-waarden strong { color: var(--type, var(--accent)); }
 .fases small { display: block; color: var(--zacht); font-size: 14px; }
 .klein-knoppen { margin-top: 10px; }
+/* Start-knop met een klein ⋯-menu ernaast voor Voltooien en Overslaan. */
+.start-rij { display: flex; gap: 10px; align-items: stretch; margin-top: 12px; }
+.start-rij > a.knop { flex: 1; margin-top: 0; }
+.meer-menu { position: relative; }
+.meer-menu > summary { list-style: none; cursor: pointer; height: 100%; min-width: 54px; display: flex; align-items: center; justify-content: center; border-radius: 18px; background: var(--vlak); color: var(--tekst); font-size: 22px; font-weight: 700; }
+.meer-menu > summary::-webkit-details-marker { display: none; }
+.meer-lijst { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 5; min-width: 170px; background: var(--vlak); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.25), 0 0 0 1px var(--lijn); padding: 4px; display: flex; flex-direction: column; }
+.meer-lijst > a, .meer-lijst > button { display: block; text-align: left; padding: 10px 14px; font-size: 15px; font-weight: 600; color: var(--tekst); text-decoration: none; background: none; border-radius: 10px; box-shadow: none; }
+.meer-lijst > :active { background: var(--lijn); }
+.meer-lijst > * + * { border-top: 1px solid var(--lijn); border-radius: 0 0 10px 10px; }
 .klein-knoppen > * { flex: 1; font-size: 15px; padding: 13px; }
 .gemist { box-shadow: var(--schaduw), inset 4px 0 0 var(--doel); }
 .gemist strong { display: block; margin: 2px 0 8px; }
