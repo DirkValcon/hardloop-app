@@ -279,14 +279,15 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
   function tekenVoorStart() {
     document.body.classList.add('loopmodus');
     const b0 = training.blokken[0];
-    const keuze = (w, titel, sub) => `<button type="button" role="radio" aria-checked="${waar === w}" data-actie="waar" data-waar="${w}">${titel}<small>${sub}</small></button>`;
     root.innerHTML = `
       <section class="loop" data-test="loopscherm">
         <div class="loop-kop"><button type="button" class="secundair klein" data-actie="terug">Terug</button></div>
         <h1>${training.naam}</h1>
-        <div class="waar-keuze" role="radiogroup" aria-label="Waar loop je?" data-test="waar">
-          ${keuze('binnen', 'Binnen', 'op de loopband')}${keuze('buiten', 'Buiten', 'tempo met GPS')}
-        </div>
+        <label class="waar-keuze" data-test="waar" data-waar="${waar}">
+          <span class="waar-binnen">Binnen<small>loopband</small></span>
+          <input type="checkbox" role="switch" class="schakelaar" data-actie="waar" aria-label="Binnen of buiten lopen" ${buiten() ? 'checked' : ''}>
+          <span class="waar-buiten">Buiten<small>GPS</small></span>
+        </label>
         <p class="uitleg">${minuten(training.duurSec)} · ${training.blokken.length} blokken. Je hoort na elke kilometer je tijd en 10 seconden voor elk blok wat je moet doen. ${buiten()
           ? `Begin ${snelheidNaam(b0).toLowerCase()} op <strong>${formatTijd(tempoPerKm(b0.kmh))} /km</strong> en druk op Start.`
           : `Zet de loopband op <strong>${kmh(b0.kmh)} km/u</strong> en <strong>${helling(b0.helling)}%</strong> en druk op Start.`}</p>
@@ -474,8 +475,7 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
     if (actie && actie !== 'start' && actie !== 'terug' && speler.gestartOp !== null) geluid.ontgrendel();
     if (actie === 'geluid') geluid.zet(e.target.checked);
     if (actie === 'waar') {
-      const knop = e.target.closest('[data-waar]');
-      waar = knop.dataset.waar;
+      waar = e.target.checked ? 'buiten' : 'binnen';
       bewaarWaar(opslag, waar);
       tekenVoorStart();
     }

@@ -33,10 +33,11 @@ try {
   await page.getByRole('button', { name: 'Start training' }).click();
 
   // Standaard binnen, zoals altijd.
-  assert.equal(await page.getByRole('radio', { name: /Binnen/ }).getAttribute('aria-checked'), 'true');
+  const schakelaar = page.getByRole('switch', { name: /Binnen of buiten/ });
+  assert.equal(await schakelaar.isChecked(), false);
   assert.match(await page.textContent('main'), /Zet de loopband op/);
-  await page.getByRole('radio', { name: /Buiten/ }).click();
-  assert.equal(await page.getByRole('radio', { name: /Buiten/ }).getAttribute('aria-checked'), 'true');
+  await schakelaar.click();
+  assert.equal(await schakelaar.isChecked(), true);
   assert.match(await page.textContent('main'), /Begin langzaam op \d:\d\d \/km/);
   await page.waitForFunction(() => document.querySelector('[data-test=gps-status]')?.textContent.includes('GPS ✓'));
   assert.match(await lees('gps-uitleg'), /scherm aan/);
@@ -45,7 +46,7 @@ try {
   // De keuze wordt onthouden.
   await page.reload();
   await page.waitForSelector('[data-test=waar]');
-  assert.equal(await page.getByRole('radio', { name: /Buiten/ }).getAttribute('aria-checked'), 'true');
+  assert.equal(await page.getByRole('switch', { name: /Binnen of buiten/ }).isChecked(), true);
 
   await page.getByRole('button', { name: 'Start', exact: true }).click();
   assert.match((await gezegd()).at(-1), /^Start\. Warming-up 1 van 3: 4 minuten, langzaam, tempo \d+ minuten( \d+)? per kilometer$/);
