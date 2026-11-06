@@ -56,12 +56,6 @@ const verversScherm = () => window.dispatchEvent(new HashChangeEvent('hashchange
 const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 const hoofdletter = (t) => t[0].toUpperCase() + t.slice(1);
 
-// Kop boven Vandaag: "Donderdag 12 november". Het weeknummer staat boven de kalender.
-function datumKop(vandaag) {
-  const d = naarDatum(vandaag);
-  return `${hoofdletter(DAGNAAM[dagVan(vandaag)])} ${d.getUTCDate()} ${MAANDEN[d.getUTCMonth()]}`;
-}
-
 const weekNaam = (plan, week) => {
   if (week.soort === 'basis') return week.label;
   return `Week ${week.nummer} van ${plan.weken.filter((w) => w.soort !== 'basis').length}`;
@@ -134,6 +128,8 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
   const gekozenDag = gekozenRust ?? toon?.training.datum ?? null;
 
   root.onclick = (e) => {
+    // Meer-menu (⋯) sluiten bij een tik ernaast.
+    for (const m of root.querySelectorAll('.meer-menu[open]')) if (!m.contains(e.target)) m.open = false;
     const knop = e.target.closest('button');
     if (knop?.dataset.toon) {
       opnieuw({ gekozen: knop.dataset.toon === toon?.training.id && !gekozenRust ? null : knop.dataset.toon });
@@ -162,7 +158,8 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
 
   let kal = kalenderHtml(plan, kalWeek, vandaag);
   for (const w of plan.weken) kal = kal.replace(`__WEEK_${w.maandag}__`, weekHtml(w, resultaten, vandaag, gekozenDag));
-  const kop = `<p class="groet" data-test="datumkop">${datumKop(vandaag)}</p><h1>Vandaag</h1>${kal}`;
+  // Geen zichtbare kop: de kalender laat de dag al zien. De kop blijft voor schermlezers.
+  const kop = `<h1 class="voor-schermlezer">Vandaag</h1>${kal}`;
   const overzicht = `<section class="kaart weekoverzicht" data-test="weekoverzicht">${overzichtHtml(plan, kalWeek, resultaten)}</section>`;
 
   // Na het tekenen: de kalender op de juiste week zetten en bij vegen kop en overzicht bijwerken.
@@ -237,11 +234,16 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
     ? `<p class="status-regel is-gedaan" data-test="status">✓ Gedaan${r.datum !== t.datum ? ` op ${korteDatum(r.datum)}` : ''}: ${km(r.afstandKm)} km · ${minuten(r.duurSec)} · ${r.kcal} kcal</p>`
     : r?.status === 'overgeslagen'
       ? '<p class="status-regel" data-test="status">Overgeslagen</p>'
-      : `<a class="knop primair breed" href="#loop/${t.id}" role="button" data-actie="start">${isVandaag ? 'Start training' : 'Nu al starten'}</a>
-      ${isVandaag ? `<div class="knoppen klein-knoppen">
-        <a class="knop secundair" href="#afvinken/${t.id}">Afvinken zonder app</a>
-        <button type="button" class="secundair" data-overslaan="${t.id}">Overslaan</button>
-      </div>` : ''}`;
+      : `<div class="start-rij">
+        <a class="knop primair breed" href="#loop/${t.id}" role="button" data-actie="start">${isVandaag ? 'Start training' : 'Nu al starten'}</a>
+        ${isVandaag ? `<details class="meer-menu" data-test="meer-menu">
+          <summary aria-label="Meer opties">⋯</summary>
+          <div class="meer-lijst">
+            <a href="#afvinken/${t.id}">Voltooien</a>
+            <button type="button" data-overslaan="${t.id}">Overslaan</button>
+          </div>
+        </details>` : ''}
+      </div>`;
 
   root.innerHTML = `
     ${kop}
@@ -249,8 +251,8 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
     ${rustdag}
     ${vandaagGedaan.length && !keuzeT ? '<h2>Volgende training</h2>' : ''}
     <article class="kaart vandaag-kaart training-${t.type}" data-test="vandaag" data-training="${t.id}">
-      <div class="stapnr">${wanneer} · ${week.label}</div>
-      <div class="label label-${t.type}">${TYPE[t.type]}</div>
+      <div class="kaart-kop"><span class="stapnr">${wanneer} · ${week.label}</span>
+        <span class="label label-${t.type}">${TYPE[t.type]}</span></div>
       <h2 class="vandaag-titel">${t.naam}</h2>
       <div class="cijfers">
         <div><strong data-test="duur">${minuten(t.duurSec)}</strong><small>totaal</small></div>

@@ -210,6 +210,9 @@ body.met-tabs main { padding-bottom: 120px; }
 
 /* ---------- Vandaag ---------- */
 .vandaag-kaart { padding: 20px; }
+/* Dag · week en het soort training op één regel. */
+.kaart-kop { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.kaart-kop .label { margin: 0; }
 .vandaag-titel { font-size: 25px; margin: 6px 0 14px; letter-spacing: -.01em; }
 .cijfers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
 .cijfers div { background: var(--vlak); border-radius: 16px; padding: 12px 6px; text-align: center; }
@@ -221,6 +224,16 @@ body.met-tabs main { padding-bottom: 120px; }
 .fases li:nth-child(2) .blok-waarden strong { color: var(--type, var(--accent)); }
 .fases small { display: block; color: var(--zacht); font-size: 14px; }
 .klein-knoppen { margin-top: 10px; }
+/* Start-knop met een klein ⋯-menu ernaast voor Voltooien en Overslaan. */
+.start-rij { display: flex; gap: 10px; align-items: stretch; margin-top: 12px; }
+.start-rij > a.knop { flex: 1; margin-top: 0; }
+.meer-menu { position: relative; }
+.meer-menu > summary { list-style: none; cursor: pointer; height: 100%; min-width: 54px; display: flex; align-items: center; justify-content: center; border-radius: 18px; background: var(--vlak); color: var(--tekst); font-size: 22px; font-weight: 700; }
+.meer-menu > summary::-webkit-details-marker { display: none; }
+.meer-lijst { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 5; min-width: 170px; background: var(--vlak); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.25), 0 0 0 1px var(--lijn); padding: 4px; display: flex; flex-direction: column; }
+.meer-lijst > a, .meer-lijst > button { display: block; text-align: left; padding: 10px 14px; font-size: 15px; font-weight: 600; color: var(--tekst); text-decoration: none; background: none; border-radius: 10px; box-shadow: none; }
+.meer-lijst > :active { background: var(--lijn); }
+.meer-lijst > * + * { border-top: 1px solid var(--lijn); border-radius: 0 0 10px 10px; }
 .klein-knoppen > * { flex: 1; font-size: 15px; padding: 13px; }
 .gemist { box-shadow: var(--schaduw), inset 4px 0 0 var(--doel); }
 .gemist strong { display: block; margin: 2px 0 8px; }
@@ -374,8 +387,7 @@ details.gemist[open] .gemist-actie::after { content: " ⌄"; }
 .vandaag-kaart .fases { margin-top: 16px; }
 
 /* ---------- Vandaag: datum en weekstrook (story 17) ---------- */
-.groet { color: var(--zacht); font-weight: 700; font-size: 15px; margin: 0; }
-.groet + h1 { margin-top: 0; }
+.voor-schermlezer { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 /* Kalender bovenin Vandaag: veeg tussen de weken, tik op een dag. */
 .kalender { background: var(--kaart); border-radius: var(--rond); box-shadow: var(--schaduw); padding: 4px 4px 8px; margin: 6px 0 14px; }
 .kalender-kop { display: flex; align-items: center; justify-content: space-between; padding: 0 2px 2px; }

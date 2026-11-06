@@ -48,7 +48,7 @@ assert.match(voor.kaart, /Dinsdag 3 nov/);
 
 console.log('✓ story 4 vandaag: alle browserchecks geslaagd');
 
-// Story 17 + kalender: datumkop, weeknaam boven de kalender, status per dag. Donderdag 12 nov, week 2:
+// Story 17 + kalender: weeknaam boven de kalender, status per dag. Donderdag 12 nov, week 2:
 // di gedaan, do vandaag, zo gepland.
 {
   const ctx = await opzet({ vandaag: '2026-11-12', profiel });
@@ -59,7 +59,8 @@ console.log('✓ story 4 vandaag: alle browserchecks geslaagd');
     })));
     await page.goto(ctx.url);
     await page.waitForSelector('[data-test=kalender]');
-    assert.equal((await page.textContent('[data-test=datumkop]')).trim(), 'Donderdag 12 november');
+    // Geen datumkop meer boven de kalender (voelde dubbel).
+    assert.equal(await page.locator('[data-test=datumkop]').count(), 0);
     assert.equal(await page.textContent('[data-test=weeknaam]'), 'Week 2 van 11');
     const week2 = page.locator('[data-test=weekstrook][data-maandag="2026-11-09"]');
     const dagen = await week2.locator('.weekdag').evaluateAll((els) => els.map((e) => e.dataset.status ?? 'rust'));
