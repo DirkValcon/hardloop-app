@@ -505,9 +505,7 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
 }
 
 /* Binnen of buiten lopen */
-.waar-keuze { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; margin: 12px 0; padding: 14px 16px; border-radius: 16px; background: var(--kaart); border: 2px solid var(--lijn); font-weight: 800; font-size: 18px; color: var(--zacht); cursor: pointer; }
-.waar-keuze .waar-binnen { text-align: right; }
-.waar-keuze small { display: block; font-weight: 600; font-size: 13px; }
+.waar-keuze { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 10px 0 14px; font-weight: 600; font-size: 16px; color: var(--zacht); cursor: pointer; }
 .waar-keuze[data-waar=binnen] .waar-binnen, .waar-keuze[data-waar=buiten] .waar-buiten { color: var(--tekst); }
 .waar-keuze .schakelaar { background: var(--accent); }
 .schakelaar { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 52px; height: 32px; margin: 0; border-radius: 16px; background: var(--lijn); transition: background .2s; cursor: pointer; }
@@ -515,7 +513,7 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
 .schakelaar:checked { background: var(--accent); }
 .schakelaar:checked::after { transform: translateX(20px); }
 .schakelaar:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.gps-status { font-weight: 700; color: var(--zacht); margin: 4px 0; }
+.gps-status { font-weight: 600; font-size: 15px; color: var(--zacht); margin: 4px 0; }
 .gps-status[data-status=ok] { color: var(--rustig); }
 .gps-status[data-status=zwak], .gps-status[data-status=kwijt], .gps-status[data-status=geweigerd], .gps-status[data-status=geen] { color: var(--fout); }
 .loop-stand .gps-status { margin: 0; font-size: 14px; }

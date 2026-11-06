@@ -284,16 +284,16 @@ export function toonLoopscherm(root, training, { opslag = localStorage, profiel,
         <div class="loop-kop"><button type="button" class="secundair klein" data-actie="terug">Terug</button></div>
         <h1>${training.naam}</h1>
         <label class="waar-keuze" data-test="waar" data-waar="${waar}">
-          <span class="waar-binnen">Binnen<small>loopband</small></span>
+          <span class="waar-binnen">Binnen</span>
           <input type="checkbox" role="switch" class="schakelaar" data-actie="waar" aria-label="Binnen of buiten lopen" ${buiten() ? 'checked' : ''}>
-          <span class="waar-buiten">Buiten<small>GPS</small></span>
+          <span class="waar-buiten">Buiten</span>
         </label>
         <p class="uitleg">${minuten(training.duurSec)} · ${training.blokken.length} blokken. Je hoort na elke kilometer je tijd en 10 seconden voor elk blok wat je moet doen. ${buiten()
           ? `Begin ${snelheidNaam(b0).toLowerCase()} op <strong>${formatTijd(tempoPerKm(b0.kmh))} /km</strong> en druk op Start.`
           : `Zet de loopband op <strong>${kmh(b0.kmh)} km/u</strong> en <strong>${helling(b0.helling)}%</strong> en druk op Start.`}</p>
         ${buiten() ? `
         <p class="gps-status" data-test="gps-status"></p>
-        <p class="hint" data-test="gps-uitleg">Houd de app open met het scherm aan. Gaat je iPhone op slot of open je een andere app, dan stopt de GPS en komt je afstand lager uit. Muziek bedienen kan met je oortjes of via het bedieningspaneel.</p>` : ''}
+        <p class="hint" data-test="gps-uitleg">Houd de app open met het scherm aan: op slot of in een andere app stopt de GPS.</p>` : ''}
         <div class="loop-balk">${balk}</div>
         <label class="keuze geluid-keuze"><input type="checkbox" data-actie="geluid" ${geluid.aan ? 'checked' : ''}>
           <span>Geluid en gesproken aanwijzingen<small>Zet het volume van je iPhone aan.</small></span></label>
