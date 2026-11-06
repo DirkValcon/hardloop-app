@@ -505,7 +505,7 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
 }
 
 /* Binnen of buiten lopen */
-.waar-keuze { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 10px 0 14px; font-weight: 600; font-size: 16px; color: var(--zacht); cursor: pointer; }
+.waar-keuze { display: flex; align-items: center; justify-content: flex-start; gap: 12px; margin: 10px 0 14px; font-weight: 600; font-size: 16px; color: var(--zacht); cursor: pointer; }
 .waar-keuze[data-waar=binnen] .waar-binnen, .waar-keuze[data-waar=buiten] .waar-buiten { color: var(--tekst); }
 .waar-keuze .schakelaar { background: var(--accent); }
 .schakelaar { appearance: none; -webkit-appearance: none; flex: none; position: relative; width: 52px; height: 32px; margin: 0; border-radius: 16px; background: var(--lijn); transition: background .2s; cursor: pointer; }
