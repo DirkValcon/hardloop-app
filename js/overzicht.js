@@ -9,6 +9,7 @@ import { maandagVan } from './schema.js';
 import { korteDatum, kmh, km } from './opmaak.js';
 import { berekenSnelheden, EIGEN_ZONES, normaliseerEigen } from './zones.js';
 import { toonMelding } from './melding.js';
+import { huidigPlan } from './plan.js';
 
 const parseTijdVeilig = (tekst, standaard) => parseTijd(tekst ?? '') ?? standaard;
 
@@ -41,7 +42,7 @@ function startweekOpties(huidig, vandaag) {
 const DAGVOLGORDE = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
 
 // Profiel in vier delen, elk met een eigen knop om alleen dat deel te wijzigen.
-function overzichtHtml(profiel, vandaag, account = '') {
+function overzichtHtml(profiel, vandaag, account = '', doelNaVakantie = null) {
   const p = effectiefProfiel(profiel, vandaag);
   const extra = `<dt>Week 1</dt><dd data-test="startweek">${weekTekst(startVan(p.doelDatum, schemaWeken(p)), vandaag)}</dd>${
     p.extraWeken > 0 && p.extraWekenKeuze === 'basis'
@@ -58,7 +59,8 @@ function overzichtHtml(profiel, vandaag, account = '') {
         <dt>Doel</dt><dd>${p.doelAfstandSeconden ? `${doelafstand(p.schema.doelKm).naam} in ${formatTijd(p.doelAfstandSeconden)}` : 'Uitlopen'}</dd>` : `
         <dt>5 km-tijd</dt><dd>${formatTijd(p.vijfKmSeconden)}</dd>
         <dt>Doel</dt><dd>${p.doelAfstand} km${p.doelSeconden ? ' in ' + formatTijd(p.doelSeconden) : ''}</dd>`}
-        <dt>Doeldatum</dt><dd>${datumTekst(p.doelDatum)}</dd>
+        <dt>Doeldatum</dt><dd>${doelNaVakantie && doelNaVakantie !== p.doelDatum
+          ? `${datumTekst(doelNaVakantie)} <small class="hint" data-test="doel-vakantie">(${dagenTussen(p.doelDatum, doelNaVakantie)} dagen later door vakantie)</small>` : datumTekst(p.doelDatum)}</dd>
         ${extra}
       </dl>
       ${p.schema ? doelHtml({ ...p.schema, doelSeconden: p.doelAfstandSeconden }) : haalbaarheidHtml(p.vijfKmSeconden, p.doelSeconden)}
@@ -168,7 +170,9 @@ function formulierHtml(invoer, profiel, vandaag, fouten = {}, sectie = 'instelli
 }
 
 export function toonOverzicht(root, profiel, { vandaag = vandaagIso(), opslag = localStorage, gewijzigd, account, uitloggen, nieuwSchema } = {}) {
-  root.innerHTML = overzichtHtml(profiel, vandaag, account);
+  let doelNaVakantie = null;
+  try { doelNaVakantie = huidigPlan(profiel, vandaag, opslag).doelDatum; } catch { /* zonder plan: gewoon de doeldatum */ }
+  root.innerHTML = overzichtHtml(profiel, vandaag, account, doelNaVakantie);
   let sectie = 'instellingen';
   root.onclick = (e) => {
     const wijzig = e.target.closest('[data-actie=wijzig]');
