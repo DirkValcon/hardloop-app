@@ -48,6 +48,10 @@ function maakGeluid() {
   let laatsteStart = 0;
   let vrijgeefTimer = null;
   let piepTot = 0;
+  // Geschatte eindtijd van alle uitspraken samen. iOS meldt 'klaar' soms te vroeg of helemaal niet;
+  // we laten het kanaal nooit los vóór deze tijd, anders kapt iOS de stem af.
+  let spraakTot = 0;
+  let stilLoop = null;
 
   // iPhone: zonder 'playback' zet de stille-modusschakelaar al het webgeluid uit. Maar 'playback'
   // pauzeert ook Spotify, en zolang wij het kanaal vasthouden gaat de muziek niet verder.
@@ -65,16 +69,32 @@ function maakGeluid() {
     if (ctx.state !== 'running') ctx.resume?.().catch(() => {});
   };
 
-  const bezig = () => wachtrij.size > 0 || Date.now() < piepTot
+  // Een stil, doorlopend geluidje terwijl de stem praat: zo ziet iOS dat de app geluid maakt en houdt
+  // het kanaal open. Zonder dit vindt iOS de app 'stil' (spraak telt niet mee) en kapt de stem af.
+  const houdOpen = () => {
+    if (!ctx || stilLoop) return;
+    try {
+      const bron = ctx.createBufferSource();
+      bron.buffer = ctx.createBuffer(1, 22050, 22050);
+      bron.loop = true;
+      bron.connect(ctx.destination);
+      bron.start(0);
+      stilLoop = bron;
+    } catch { stilLoop = null; }
+  };
+  const laatDicht = () => { try { stilLoop?.stop(); } catch { /* al gestopt */ } stilLoop = null; };
+
+  const bezig = () => wachtrij.size > 0 || Date.now() < piepTot || Date.now() < spraakTot
     || (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending) && Date.now() - laatsteStart < 20000);
 
   // Kanaal vrijgeven zodra alles gezegd is: context stil en sessie terug naar 'auto',
   // zodat iOS andere apps (Spotify) laat weten dat ze verder kunnen spelen.
-  const geefVrij = (naMs = 800) => {
+  const geefVrij = (naMs = 1200) => {
     clearTimeout(vrijgeefTimer);
     vrijgeefTimer = setTimeout(() => {
       vrijgeefTimer = null;
       if (bezig()) { geefVrij(500); return; }
+      laatDicht();
       try { if (ctx?.state === 'running') ctx.suspend?.().catch(() => {}); } catch { /* niets */ }
       zetModus('auto');
     }, naMs);
@@ -133,6 +153,10 @@ function maakGeluid() {
       if (!aan || !window.speechSynthesis) return;
       try {
         claim();
+        wekContext();
+        houdOpen();
+        // Ruime schatting van de spreekduur (±12 tekens per seconde) plus marge.
+        spraakTot = Math.max(spraakTot, Date.now()) + 1500 + tekst.length * 85;
         // iOS-spraak kan vastlopen (blijft "bezig" zonder geluid). Hangt hij langer dan 20 s, dan opnieuw beginnen.
         if (speechSynthesis.speaking && Date.now() - laatsteStart > 20000) { speechSynthesis.cancel(); wachtrij.clear(); }
         if (speechSynthesis.paused) speechSynthesis.resume();
