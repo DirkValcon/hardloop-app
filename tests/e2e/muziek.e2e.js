@@ -14,7 +14,7 @@ try {
       value: { get type() { return type; }, set type(v) { type = v; window.__modi.push(v); } },
     });
     window.__gezegd = [];
-    // Nepspraak: elke uitspraak duurt 2 seconden en meldt dan 'klaar'.
+    // Nepspraak zoals op iOS: meldt al na 0,3 seconde 'klaar', terwijl de stem nog praat.
     let bezig = 0;
     Object.defineProperty(window, 'speechSynthesis', {
       configurable: true,
@@ -23,7 +23,7 @@ try {
         speak(u) {
           if (u.text.trim()) window.__gezegd.push(u.text);
           bezig++;
-          setTimeout(() => { bezig--; u.onend?.(); }, 2000);
+          setTimeout(() => { bezig--; u.onend?.(); }, 300);
         },
       },
     });
@@ -32,11 +32,13 @@ try {
   await page.getByRole('button', { name: 'Start training' }).click();
   await page.getByRole('button', { name: 'Start', exact: true }).click();
 
-  // Tijdens de startaankondiging is het kanaal geclaimd.
+  // Tijdens de startaankondiging blijft het kanaal geclaimd, ook al meldt de spraak te vroeg 'klaar'.
   await page.clock.runFor(500);
   assert.equal(await modus(), 'playback');
+  await page.clock.runFor(2_000);
+  assert.equal(await modus(), 'playback', 'stem niet afkappen');
   // Na afloop weer losgelaten, zodat Spotify verder kan.
-  await page.clock.runFor(3_000);
+  await page.clock.runFor(12_000);
   assert.equal(await modus(), 'auto');
 
   // Een tik op het scherm (pauze) claimt even en laat daarna ook weer los.
@@ -49,7 +51,7 @@ try {
 
   // 10 seconden voor blok 2: piep + aankondiging, daarna weer vrij.
   const voor = (await page.evaluate(() => window.__modi.length));
-  await page.clock.runFor(240_000);
+  await page.clock.runFor(250_000);
   const modi = await page.evaluate((n) => window.__modi.slice(n), voor);
   assert.ok(modi.includes('playback'), JSON.stringify(modi));
   assert.equal(modi.at(-1), 'auto');
