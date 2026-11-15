@@ -533,3 +533,18 @@ button.is-gevaar { background: var(--fout); color: #fff; box-shadow: none; }
 .tempo-vak[data-oordeel=goed] .loop-oordeel { color: var(--rustig); }
 .tempo-vak[data-oordeel=te-snel] .loop-oordeel, .tempo-vak[data-oordeel=te-langzaam] .loop-oordeel { color: var(--fout); }
 .loop-groot.is-buiten .tempo-vak[data-oordeel=te-snel], .loop-groot.is-buiten .tempo-vak[data-oordeel=te-langzaam] { border-color: var(--fout); }
+
+/* Vakantie (Schema) */
+.vakantie { margin: 4px 0 14px; }
+.vakantie > summary small { font-weight: 400; color: var(--zacht); margin-left: 6px; }
+.vakantie-rij { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--vlak); }
+.vakantie-rij small { display: block; color: var(--zacht); font-size: 14px; }
+.vakantie-rij .link-knop { background: none; box-shadow: none; color: var(--accent); font-weight: 700; font-size: 15px; padding: 4px 0; }
+.vakantie-periode { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-top: 10px; }
+.vakantie-periode label { font-size: 14px; color: var(--zacht); }
+.vakantie-periode label { min-width: 0; }
+.vakantie-periode input { width: 100%; min-width: 0; box-sizing: border-box; margin-top: 4px; padding-left: 10px; padding-right: 10px; }
+.vakantie-dagen small { display: block; font-size: 12px; color: var(--zacht); }
+.dagknop.is-gekozen { background: var(--accent); color: #fff; }
+.dagknop.is-gekozen small { color: #fff; }
+.vakantie .primair.klein { margin-top: 10px; }

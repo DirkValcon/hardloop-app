@@ -228,7 +228,8 @@ export function toonVandaag(root, profiel, { vandaag = vandaagIso(), opslag = lo
   const wanneer = isVandaag ? 'Vandaag'
     : dagen === 1 ? 'Morgen' : dagen === -1 ? 'Gisteren' : `${hoofdletter(DAGNAAM[t.dag])} ${korteDatum(t.datum)}`;
   const rustdag = keuzeT || isVandaag || vandaagGedaan.length ? '' : `<p class="uitleg" data-test="rustdag">${plan.weken[0].maandag > vandaag && week === plan.weken[0]
-    ? `Je schema start op ${datumTekst(plan.weken[0].maandag)}.` : 'Vandaag is een rustdag.'} Dit is je volgende training.</p>`;
+    ? `Je schema start op ${datumTekst(plan.weken[0].maandag)}.`
+    : (plan.vakanties ?? []).some((v) => vandaag >= v.van && vandaag <= v.tot) ? 'Je bent op vakantie: vandaag geen training.' : 'Vandaag is een rustdag.'} Dit is je volgende training.</p>`;
   const totDoel = dagenTussen(vandaag, plan.doelDatum);
   const acties = r?.status === 'gedaan'
     ? `<p class="status-regel is-gedaan" data-test="status">✓ Gedaan${r.datum !== t.datum ? ` op ${korteDatum(r.datum)}` : ''}: ${km(r.afstandKm)} km · ${minuten(r.duurSec)} · ${r.kcal} kcal</p>`

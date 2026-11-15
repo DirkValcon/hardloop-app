@@ -1,7 +1,7 @@
 // Aanpassingen per week: trainingen verschuiven en dagen vrij zetten, zonder de rest van het schema te raken.
-// Bewaard als { verplaatst: { trainingId: datum }, vrij: [datum, ...] }.
+// Bewaard als { verplaatst: { trainingId: datum }, vrij: [datum, ...], vakanties: [{ van, tot, dagen }] }.
 import { DAGEN } from './profiel.js';
-import { naarDatum, plusDagen } from './datum.js';
+import { naarDatum, plusDagen, maandagVan, dagenTussen } from './datum.js';
 import { meldOpgeslagen } from './opgeslagen.js';
 
 export const OPSLAG_AANPASSINGEN = 'hardloop-app.aanpassingen.v1';
@@ -13,13 +13,13 @@ const dagVan = (iso) => DAGEN[(naarDatum(iso).getUTCDay() + 6) % 7];
 const zelfdeWeek = (week, datum) => datum >= week.maandag && datum <= plusDagen(week.maandag, 6);
 
 export function legeAanpassingen() {
-  return { verplaatst: {}, vrij: [] };
+  return { verplaatst: {}, vrij: [], vakanties: [] };
 }
 
 export function laadAanpassingen(opslag) {
   try {
     const a = JSON.parse(opslag.getItem(OPSLAG_AANPASSINGEN));
-    return a && a.verplaatst && Array.isArray(a.vrij) ? a : legeAanpassingen();
+    return a && a.verplaatst && Array.isArray(a.vrij) ? { ...a, vakanties: Array.isArray(a.vakanties) ? a.vakanties : [] } : legeAanpassingen();
   } catch {
     return legeAanpassingen();
   }
@@ -50,8 +50,82 @@ export function zetVrij(aanpassingen, datum, vrij = true) {
   return { ...aanpassingen, vrij: vrij ? [...lijst, datum].sort() : lijst };
 }
 
+// ---------- Vakantie ----------
+// Een vakantie is een periode (van t/m tot) met de dagen waarop je toch traint. Het schema loopt in
+// volgorde door: trainingen die niet in de vakantie passen schuiven naar de trainingsdagen erna, en
+// alles daarna schuift evenveel trainingsdagen op. De doelloop schuift evenveel dagen mee als de
+// laatste training ervoor.
+
+export function voegVakantieToe(aanpassingen, { van, tot, dagen = [] }) {
+  if (!van || !tot || tot < van) throw new Error('Kies een periode: de einddatum ligt vóór de begindatum');
+  if (dagenTussen(van, tot) > 60) throw new Error('Een vakantie duurt hoogstens 2 maanden');
+  const binnen = [...new Set(dagen)].filter((d) => d >= van && d <= tot).sort();
+  // Een nieuwe vakantie vervangt een vakantie die ermee overlapt.
+  const rest = (aanpassingen.vakanties ?? []).filter((v) => v.tot < van || v.van > tot);
+  return { ...aanpassingen, vakanties: [...rest, { van, tot, dagen: binnen }].sort((a, b) => a.van.localeCompare(b.van)) };
+}
+
+export function verwijderVakantie(aanpassingen, van) {
+  return { ...aanpassingen, vakanties: (aanpassingen.vakanties ?? []).filter((v) => v.van !== van) };
+}
+
+function schuifVakantie(plan, vakantie) {
+  const alle = plan.weken.flatMap((w) => w.trainingen.map((t) => ({ t, w })))
+    .sort((a, b) => a.t.datum.localeCompare(b.t.datum));
+  const gewoneAlle = alle.filter((x) => x.t.type !== 'doel');
+  const na = gewoneAlle.filter((x) => x.t.datum >= vakantie.van);
+  const doel = alle.find((x) => x.t.type === 'doel' && x.t.datum >= vakantie.van);
+  const inVakantie = na.filter((x) => x.t.datum <= vakantie.tot).length;
+  const kanDagen = vakantie.dagen.slice(0, inVakantie);
+  const tekort = inVakantie - kanDagen.length;
+  const plekken = [...kanDagen, ...na.filter((x) => x.t.datum > vakantie.tot).map((x) => x.t.datum)];
+  // Extra plekken achteraan: het weekritme van de laatste 7 dagen herhalen.
+  if (tekort > 0) {
+    const laatste = gewoneAlle.at(-1).t.datum;
+    const ritme = gewoneAlle.map((x) => x.t.datum).filter((d) => d > plusDagen(laatste, -7));
+    for (let j = 0; j < tekort; j++) plekken.push(plusDagen(ritme[j % ritme.length], 7 * (1 + Math.floor(j / ritme.length))));
+  }
+  const nieuweDatum = new Map(na.map((x, i) => [x.t.id, plekken[i]]));
+  let verschuiving = 0;
+  if (na.length) verschuiving = dagenTussen(na.at(-1).t.datum, plekken[na.length - 1]);
+  if (doel) {
+    const laatsteNieuw = na.length ? plekken[na.length - 1] : null;
+    let datum = plusDagen(doel.t.datum, tekort > 0 ? verschuiving : 0);
+    if (laatsteNieuw && datum <= laatsteNieuw) datum = plusDagen(laatsteNieuw, 1);
+    nieuweDatum.set(doel.t.id, datum);
+  }
+
+  // Opnieuw per kalenderweek indelen; schuift er iets voorbij de laatste week, dan komt er een week bij.
+  const weken = plan.weken.map((w) => ({ ...w, trainingen: [] }));
+  for (const { t } of alle) {
+    const datum = nieuweDatum.get(t.id) ?? t.datum;
+    const maandag = maandagVan(datum);
+    let week = weken.find((w) => w.maandag === maandag);
+    if (!week) {
+      const vorige = weken.at(-1);
+      const nummer = vorige.nummer + 1;
+      week = { ...vorige, nummer, label: `Week ${nummer}`, maandag, trainingen: [] };
+      weken.push(week);
+      weken.sort((a, b) => a.maandag.localeCompare(b.maandag));
+    }
+    week.trainingen.push(datum === t.datum ? t : { ...t, datum, dag: dagVan(datum), vakantie: true });
+  }
+  for (const w of weken) w.trainingen.sort((a, b) => a.datum.localeCompare(b.datum));
+  const doelDatum = doel ? nieuweDatum.get(doel.t.id) : plan.doelDatum;
+  const info = { ...vakantie, doelVerschuiving: doel ? dagenTussen(doel.t.datum, doelDatum) : 0 };
+  return { ...plan, weken: weken.filter((w) => w.trainingen.length || w.maandag <= plan.weken.at(-1).maandag),
+    doelDatum, vakanties: [...(plan.vakanties ?? []), info] };
+}
+
+// Alle vakanties toepassen, in volgorde van datum.
+export function pasVakantiesToe(plan, vakanties = []) {
+  return [...vakanties].sort((a, b) => a.van.localeCompare(b.van)).reduce(schuifVakantie, { ...plan, vakanties: [] });
+}
+
 // Pas alle aanpassingen toe op het plan. Elke week krijgt ook `vervallen` en `waarschuwingen`.
-export function pasToe(plan, aanpassingen) {
+// Eerst de vakanties (die schuiven het schema door), daarna verplaatsen en vrije dagen per week.
+export function pasToe(basisplan, aanpassingen) {
+  const plan = pasVakantiesToe(basisplan, aanpassingen.vakanties);
   const vrij = new Set(aanpassingen.vrij);
   const weken = plan.weken.map((week) => {
     let trainingen = week.trainingen.map((t) => {
